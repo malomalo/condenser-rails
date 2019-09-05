@@ -43,6 +43,7 @@ module Rails
       app.config.assets.path.unshift(*paths["vendor/assets"].existent_directories)
       app.config.assets.path.unshift(*paths["lib/assets"].existent_directories)
       app.config.assets.path.unshift(*paths["app/assets"].existent_directories)
+      app.config.assets.npm_path = app.root.join('node_modules').to_s
     end
   end
 end
@@ -54,11 +55,17 @@ class Condenser::Railtie < ::Rails::Railtie
       self._blocks << block
     end
   end
+  
+  module SassFunctions
+    def asset_path(path, options = {})
+      SassC::Script::Value::String.new(condenser_context.asset_path(path.value, options), :string)
+    end
+  end
 
   config.assets = OrderedOptions.new
   config.assets._blocks     = []
   config.assets.path        = []
-  config.assets.precompile  = %w(application.css application.js)
+  config.assets.precompile  = %w(application.css application.js **/*.jpg **/*.png **/*.gif)
   config.assets.prefix      = "/assets"
   config.assets.quiet       = false
 
@@ -76,6 +83,9 @@ class Condenser::Railtie < ::Rails::Railtie
 
   config.assets.configure do |app, env|
     config.assets.path.each { |path| env.append_path(path) }
+    if config.assets.npm_path && File.directory?(config.assets.npm_path)
+      env.append_npm_path(config.assets.npm_path)
+    end
   end
 
   config.assets.configure do |app, env|
@@ -139,6 +149,10 @@ class Condenser::Railtie < ::Rails::Railtie
       block.call(app, env)
     end
 
+    env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new({
+      functions: Condenser::Railtie::SassFunctions
+    })
+    
     # Set compressors after the configure blocks since they can
     # define new compressors and we only accept existent compressors.
     env.register_preprocessor 'application/javascript', Condenser::BabelProcessor
