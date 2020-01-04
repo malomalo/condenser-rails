@@ -166,14 +166,6 @@ class Condenser::Railtie < ::Rails::Railtie
       env.register_writer resolve_writer(writer)
     end
 
-    # No more configuration changes at this point.
-    # With cache classes on, Sprockets won't check the FS when files
-    # change. Preferable in production when the FS only changes on
-    # deploys when the app restarts.
-    if config.cache_classes
-      env = env.cached
-    end
-
     env
   end
 
@@ -188,9 +180,8 @@ class Condenser::Railtie < ::Rails::Railtie
     config = app.config
 
     if config.assets.compile
-      config.assets.precompile
-      require 'condenser/server'
       app.assets = self.build_environment(app, true)
+      require 'condenser/server'
       app.routes.prepend do
         mount Condenser::Server.new(app.assets, logger: Rails.logger) => config.assets.prefix
       end
