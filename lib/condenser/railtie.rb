@@ -68,7 +68,8 @@ class Condenser::Railtie < ::Rails::Railtie
   config.assets.precompile  = %w(application.css application.js **/*.jpg **/*.png **/*.gif)
   config.assets.prefix      = "/assets"
   config.assets.quiet       = false
-
+  config.assets.manifest    = 'config/manifest.json'
+  
   # initializer :quiet_assets do |app|
   #   if app.config.assets.quiet
   #     app.middleware.insert_before ::Rails::Rack::Logger, ::Condenser::Rails::QuietAssets
@@ -78,7 +79,7 @@ class Condenser::Railtie < ::Rails::Railtie
   # config.assets.version     = ""
   config.assets.compile     = true
   config.assets.digest      = true
-  config.assets.cache_limit = 50.megabytes
+  config.assets.cache_limit = 100.megabytes
   config.assets.compressors = [:zlib]
 
   config.assets.configure do |app, env|
@@ -158,8 +159,8 @@ class Condenser::Railtie < ::Rails::Railtie
     env.register_preprocessor 'application/javascript', Condenser::BabelProcessor
     env.register_exporter     'application/javascript', Condenser::RollupProcessor
 
-    env.register_minifier     'application/javascript', resolve_minifier(config.assets.js_minifier)
-    env.register_minifier     'text/css', resolve_minifier(config.assets.css_minifier)
+    env.register_minifier     'application/javascript', resolve_minifier(config.assets.js_minifier) if config.assets.js_minifier
+    env.register_minifier     'text/css', resolve_minifier(config.assets.css_minifier) if config.assets.css_minifier
 
     env.register_writer Condenser::FileWriter.new
     config.assets.compressors&.each do |writer|
@@ -173,7 +174,7 @@ class Condenser::Railtie < ::Rails::Railtie
     config = app.config
     
     path = File.join(config.paths['public'].first, config.assets.prefix)
-    Condenser::Manifest.new(app.assets, path, config.assets.manifest || app.root.join('config', 'assets.json'))
+    Condenser::Manifest.new(app.assets, path, config.assets.manifest)
   end
 
   config.after_initialize do |app|
