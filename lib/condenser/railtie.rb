@@ -156,7 +156,18 @@ class Condenser::Railtie < ::Rails::Railtie
     
     # Set compressors after the configure blocks since they can
     # define new compressors and we only accept existent compressors.
-    env.register_preprocessor 'application/javascript', Condenser::BabelProcessor
+    if ::Rails.env == 'development'
+      env.register_preprocessor 'application/javascript', Condenser::BabelProcessor.new({
+        plugins: [
+          ["#{Condenser::BabelProcessor.node_modules_path}/babel-plugin-transform-class-extended-hook", {}],
+          ["#{Condenser::BabelProcessor.node_modules_path}/@babel/plugin-proposal-class-properties", {}]
+        ],
+        presets: nil
+      })
+    else
+      env.register_preprocessor 'application/javascript', Condenser::BabelProcessor.new()
+    end
+    
     env.register_exporter     'application/javascript', Condenser::RollupProcessor
 
     env.register_minifier     'application/javascript', resolve_minifier(config.assets.js_minifier) if config.assets.js_minifier
