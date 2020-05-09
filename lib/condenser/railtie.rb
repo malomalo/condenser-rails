@@ -142,7 +142,7 @@ class Condenser::Railtie < ::Rails::Railtie
       ::Rails.logger.warn "Application uninitialized: Try calling YourApp::Application.initialize!"
     end
 
-    env = Condenser.new(pipeline: false)
+    env = Condenser.new(pipeline: false, logger: ::Rails.logger)
     config = app.config
 
     # Run app.assets.configure blocks
