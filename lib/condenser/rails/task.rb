@@ -62,21 +62,21 @@ module Condenser::Rails
         end
 
         desc "Compile all the assets named in config.assets.precompile"
-        task :precompile => :environment do
+        task precompile: :environment do
           with_logger do
             manifest.compile(assets)
           end
         end
 
         desc "Remove old compiled assets"
-        task :clean, [:keep] => :environment do |t, args|
+        task clean: :environment do
           with_logger do
-            manifest.clean #Integer(args.keep || self.keep)
+            manifest.clean
           end
         end
 
         desc "Remove compiled assets"
-        task :clobber => :environment do
+        task clobber: :environment do
           with_logger do
             manifest.clobber
           end

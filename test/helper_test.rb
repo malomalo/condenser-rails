@@ -19,7 +19,10 @@ class HelperTest < ActionView::TestCase
   
   def setup
     @path = Dir.mktmpdir
-    @assets = Condenser.new
+    @assets = Condenser.new()
+    @npm_path = File.expand_path('../../tmp', __FILE__)
+    Dir.mkdir(@npm_path) if !Dir.exist?(@npm_path)
+    @assets.npm_path = @npm_path
     @assets.append_path @path
     @assets.context_class.class_eval do
       include ::Condenser::Rails::Context

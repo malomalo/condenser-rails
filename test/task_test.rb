@@ -7,6 +7,9 @@ class TaskTest < ActiveSupport::TestCase
     @path = Dir.mktmpdir
     @manifest_file = File.join(@path, 'assets.json')
     @assets = Condenser.new(@path)
+    @npm_path = File.expand_path('../../tmp', __FILE__)
+    Dir.mkdir(@npm_path) if !Dir.exist?(@npm_path)
+    @assets.npm_path = @npm_path
     @manifest = Condenser::Manifest.new(@assets, @manifest_file)
     
     @rake = Rake::Application.new

@@ -71,7 +71,6 @@ class TestRailtie < BootTest
     assert_equal :environment, app.config.assets.resolve_with
 
     # Condenser config
-    # assert_equal "", env.version
     assert            env.cache
     assert_nil        env.minifier_for("application/javascript")
     assert_nil        env.minifier_for("text/css")
@@ -154,16 +153,6 @@ class TestRailtie < BootTest
     assert env = app.assets
     refute env.writers_for_mime_type('application/javascript').find { |w| w.is_a?(Condenser::ZlibWriter) }
   end
-
-  # def test_version
-  #   app.configure do
-  #     config.assets.version = 'v2'
-  #   end
-  #   app.initialize!
-  #
-  #   assert env = app.assets
-  #   assert_equal "v2", env.version
-  # end
 
   def test_configure
     FileUtils.mkdir_p(File.join(@rails_root, "javascripts"))
@@ -261,7 +250,7 @@ class TestRailtie < BootTest
     app.initialize!
 
     assert manifest = app.assets_manifest
-    assert_match %r{/config/assets\.json$}, manifest.filename
+    assert_match %r{/config/manifest\.json$}, manifest.filename
     assert_match %r{test_public/assets$}, manifest.dir
   end
 

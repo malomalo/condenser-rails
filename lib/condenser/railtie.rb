@@ -8,8 +8,6 @@ require 'condenser/rails/utils'
 require 'condenser/rails/context'
 require 'condenser/rails/helper'
 require 'condenser/rails/version'
-# require 'sprockets/rails/quiet_assets'
-# require 'sprockets/rails/route_wrapper'
 
 module Rails
   class Application
@@ -43,7 +41,7 @@ module Rails
       app.config.assets.path.unshift(*paths["vendor/assets"].existent_directories)
       app.config.assets.path.unshift(*paths["lib/assets"].existent_directories)
       app.config.assets.path.unshift(*paths["app/assets"].existent_directories)
-      app.config.assets.npm_path = app.root.join('node_modules').to_s
+      app.config.assets.npm_path = app.root
     end
   end
 end
@@ -53,6 +51,10 @@ class Condenser::Railtie < ::Rails::Railtie
   class OrderedOptions < ActiveSupport::OrderedOptions
     def configure(&block)
       self._blocks << block
+    end
+
+    def pipeline(&block)
+      self._pipeline = block
     end
   end
   
@@ -67,16 +69,8 @@ class Condenser::Railtie < ::Rails::Railtie
   config.assets.path        = []
   config.assets.precompile  = %w(application.css application.js **/*.jpg **/*.png **/*.gif)
   config.assets.prefix      = "/assets"
-  config.assets.quiet       = false
   config.assets.manifest    = 'config/manifest.json'
   
-  # initializer :quiet_assets do |app|
-  #   if app.config.assets.quiet
-  #     app.middleware.insert_before ::Rails::Rack::Logger, ::Condenser::Rails::QuietAssets
-  #   end
-  # end
-
-  # config.assets.version     = ""
   config.assets.compile     = true
   config.assets.digest      = true
   config.assets.cache_limit = 100.megabytes
@@ -102,18 +96,6 @@ class Condenser::Railtie < ::Rails::Railtie
       logger: env.logger
     )
   end
-
-  # Sprockets.register_dependency_resolver 'rails-env' do
-  #   ::Rails.env.to_s
-  # end
-
-  # config.assets.configure do |env|
-  #   env.depend_on 'rails-env'
-  # end
-
-  # config.assets.configure do |app, env|
-  #   env.version = config.assets.version
-  # end
 
   rake_tasks do |app|
     require 'condenser/rails/task'
@@ -145,37 +127,35 @@ class Condenser::Railtie < ::Rails::Railtie
     env = Condenser.new(pipeline: false, logger: ::Rails.logger)
     config = app.config
 
+    if config.assets._pipeline
+
+    else
+      env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new({
+        functions: Condenser::Railtie::SassFunctions
+      })
+
+      if ::Rails.env == 'development'
+        env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
+      else
+        env.register_preprocessor 'application/javascript', Condenser::BabelProcessor
+      end
+    
+      env.register_exporter       'application/javascript', Condenser::RollupProcessor
+
+      if ::Rails.env != 'development'
+        env.register_minifier       'application/javascript', resolve_minifier(config.assets.js_minifier) if config.assets.js_minifier
+        env.register_minifier       'text/css', resolve_minifier(config.assets.css_minifier) if config.assets.css_minifier
+      end
+
+      env.register_writer Condenser::FileWriter.new
+      config.assets.compressors&.each do |writer|
+        env.register_writer resolve_writer(writer)
+      end
+    end
+
     # Run app.assets.configure blocks
     config.assets._blocks.each do |block|
       block.call(app, env)
-    end
-
-    env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new({
-      functions: Condenser::Railtie::SassFunctions
-    })
-    
-    # Set compressors after the configure blocks since they can
-    # define new compressors and we only accept existent compressors.
-    if ::Rails.env == 'development'
-      env.register_preprocessor 'application/javascript', Condenser::BabelProcessor.new({
-        plugins: [
-          ["#{Condenser::BabelProcessor.node_modules_path}/babel-plugin-transform-class-extended-hook", {}],
-          ["#{Condenser::BabelProcessor.node_modules_path}/@babel/plugin-proposal-class-properties", {}]
-        ],
-        presets: nil
-      })
-    else
-      env.register_preprocessor 'application/javascript', Condenser::BabelProcessor.new()
-    end
-    
-    env.register_exporter     'application/javascript', Condenser::RollupProcessor
-
-    env.register_minifier     'application/javascript', resolve_minifier(config.assets.js_minifier) if config.assets.js_minifier
-    env.register_minifier     'text/css', resolve_minifier(config.assets.css_minifier) if config.assets.css_minifier
-
-    env.register_writer Condenser::FileWriter.new
-    config.assets.compressors&.each do |writer|
-      env.register_writer resolve_writer(writer)
     end
 
     env
