@@ -22,6 +22,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rake"
   s.add_development_dependency "byebug"
   s.add_development_dependency "sassc"
-  s.add_development_dependency "uglifier"
   s.add_development_dependency "minitest-reporters"
 end
