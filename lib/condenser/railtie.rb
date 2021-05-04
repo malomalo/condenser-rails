@@ -58,12 +58,6 @@ class Condenser::Railtie < ::Rails::Railtie
     end
   end
   
-  module SassFunctions
-    def asset_path(path, options = {})
-      SassC::Script::Value::String.new(condenser_context.asset_path(path.value, options), :string)
-    end
-  end
-
   config.assets = OrderedOptions.new
   config.assets._blocks     = []
   config.assets.path        = []
@@ -130,9 +124,7 @@ class Condenser::Railtie < ::Rails::Railtie
     if config.assets._pipeline
 
     else
-      env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new({
-        functions: Condenser::Railtie::SassFunctions
-      })
+      env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
 
       if ::Rails.env == 'development'
         env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
