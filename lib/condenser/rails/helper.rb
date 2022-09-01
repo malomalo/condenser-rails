@@ -135,10 +135,7 @@ module Condenser::Rails
     end
     
     def svg_tag(path, options=nil)
-      @svg_cache ||= {}
-      @svg_cache[path] ||= compute_asset_path(path)
-    
-      source = @svg_cache[path]
+      source = assets.find(path).to_s
       if options
         tag = source.match(/<svg[^>]*>/)[0]
         attributes = {}
@@ -148,7 +145,7 @@ module Condenser::Rails
         options.each do |k, v|
           attributes[k.to_s] = v
         end
-        source = source.sub(/<svg[^>]*>/, "<svg #{attributes.map{|k, v| " #{k}=\"#{v}\""}.join(" ")}>")
+        source = source.sub(/<svg[^>]*>/, "<svg#{attributes.map{|k, v| " #{k}=\"#{v}\""}.join("")}>")
       end
       source.html_safe
     end
