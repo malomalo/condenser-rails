@@ -80,6 +80,7 @@ class NoHostHelperTest < HelperTest
     file 'another.css',           "body { background: red; }"
     file 'bank.css',              "body { background: green; }"
     file 'subdir/subdir.css',     "body { background: yellow; }"
+    file 'box.svg', %(<svg width=16 height=16 viewBox="0 0 16 16"><rect x="9" y="9" width="16" height="16" rx="5"/></svg>)
     
     @view.assets_precompile = %w(
       application.js
@@ -92,6 +93,11 @@ class NoHostHelperTest < HelperTest
     )
     
     @view.request = ActionDispatch::Request.new({ "rack.url_scheme" => "https" })
+  end
+  
+  def test_svg_tag
+    assert_equal %(<svg width=16 height=16 viewBox="0 0 16 16"><rect x="9" y="9" width="16" height="16" rx="5"/></svg>), @view.svg_tag("box")
+    assert_equal %(<svg width=24 height=24 fill="red" viewBox="0 0 16 16"><rect x="9" y="9" width="16" height="16" rx="5"/></svg>), @view.svg_tag("box", height: 24, width: 24, fill: 'red')
   end
 
   def test_javascript_include_tag
