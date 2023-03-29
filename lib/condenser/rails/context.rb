@@ -14,7 +14,7 @@ class Condenser
         end
       end
 
-      def asset_path(path, options = {})
+      def compute_asset_path(path, options = {})
         if asset = environment.find(path)
           @dependencies << asset.source_file
           File.join(assets_prefix || "/", asset.path)

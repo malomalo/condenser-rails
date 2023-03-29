@@ -31,7 +31,7 @@ class HelperTest < ActionView::TestCase
     @manifest_file = File.join(@path, 'assets.json')
     @manifest = Condenser::Manifest.new(@assets, @manifest_file)
 
-    @view = ActionView::Base.new(ActionView::Base.build_lookup_context(nil))
+    @view = ActionView::Base.new(ActionView::LookupContext.new([]), {}, nil)
     @view.extend ::Condenser::Rails::Helper
     @view.assets              = @assets
     @view.assets_manifest     = @manifest

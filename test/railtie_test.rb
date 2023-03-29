@@ -199,8 +199,8 @@ class TestRailtie < BootTest
     assert_equal app.assets, ActionView::Base.assets
     assert_equal app.assets_manifest, ActionView::Base.assets_manifest
 
-    @view = ActionView::Base.new
-    assert_equal "/assets/foo-fa1ab0524a4477873493f2e1939b8895fca9d9a48d947aceeb7b8147799e4b3f.js", @view.javascript_path("foo")
+    @view = action_view
+    assert_equal "/assets/foo-44df8a0ae3d5a3c2716e204f54d8fe28e5ca5da2f70e85f6b86a8aaf83e0d85e.js", @view.javascript_path("foo")
 
     env = @view.assets
     assert_kind_of Condenser, env
@@ -219,7 +219,7 @@ class TestRailtie < BootTest
     refute ActionView::Base.assets
     assert_equal app.assets_manifest, ActionView::Base.assets_manifest
 
-    @view = ActionView::Base.new
+    @view = action_view
     refute @view.assets
     assert_equal app.assets_manifest, @view.assets_manifest
   end
@@ -273,7 +273,7 @@ class TestRailtie < BootTest
     app.initialize!
     app.load_tasks
 
-    path = "#{app.assets_manifest.dir}/foo-fa1ab0524a4477873493f2e1939b8895fca9d9a48d947aceeb7b8147799e4b3f.js"
+    path = "#{app.assets_manifest.dir}/foo-44df8a0ae3d5a3c2716e204f54d8fe28e5ca5da2f70e85f6b86a8aaf83e0d85e.js"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
@@ -301,7 +301,7 @@ class TestRailtie < BootTest
     app.initialize!
     app.load_tasks
 
-    path = "#{app.assets_manifest.dir}/foo-fa1ab0524a4477873493f2e1939b8895fca9d9a48d947aceeb7b8147799e4b3f.js"
+    path = "#{app.assets_manifest.dir}/foo-44df8a0ae3d5a3c2716e204f54d8fe28e5ca5da2f70e85f6b86a8aaf83e0d85e.js"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
@@ -356,4 +356,9 @@ class TestRailtie < BootTest
   #   assert middleware.include?(Sprockets::Rails::QuietAssets)
   #   assert middleware.each_cons(2).include?([Sprockets::Rails::QuietAssets, Rails::Rack::Logger])
   # end
+  
+  private
+    def action_view
+      ActionView::Base.new(ActionView::LookupContext.new([]), {}, nil)
+    end
 end
