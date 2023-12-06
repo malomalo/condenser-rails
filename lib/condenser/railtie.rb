@@ -60,6 +60,7 @@ class Condenser::Railtie < ::Rails::Railtie
   
   config.assets = OrderedOptions.new
   config.assets._blocks     = []
+  config.assets._pipeline   = nil
   config.assets.path        = []
   config.assets.precompile  = %w(application.css application.js **/*.jpg **/*.png **/*.gif)
   config.assets.prefix      = "/assets"
@@ -122,7 +123,7 @@ class Condenser::Railtie < ::Rails::Railtie
     config = app.config
 
     if config.assets._pipeline
-
+      config.assets._pipeline.call(env)
     else
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
 
