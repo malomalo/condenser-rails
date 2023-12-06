@@ -336,6 +336,49 @@ class TestRailtie < BootTest
     assert_includes env.path, @rails_root.join("stylesheets").to_s
   end
 
+  def test_defining_an_empty_pipeline
+    FileUtils.mkdir_p(File.join(@rails_root, "javascripts"))
+    FileUtils.mkdir_p(File.join(@rails_root, "stylesheets"))
+    
+    app.configure do
+      config.assets.pipeline do |condenser|
+      end
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal env.templates, {"application/erb"=>Condenser::Erubi, "application/ejs"=>Condenser::EjsTemplate}
+    assert_equal env.preprocessors, {}
+    assert_equal env.transformers, {"text/scss"=>{"text/css"=>Condenser::ScssTransformer}, "application/jst"=>{"application/javascript"=>Condenser::JstTransformer}, "image/svg+xml"=>{"application/javascript"=>Condenser::SVGTransformer}}
+    assert_equal env.postprocessors, {}
+    assert_equal env.minifiers, {}
+    assert_equal env.exporters, {}
+  end
+  
+  def test_defining_a_pipeline
+    FileUtils.mkdir_p(File.join(@rails_root, "javascripts"))
+    FileUtils.mkdir_p(File.join(@rails_root, "stylesheets"))
+    
+    app.configure do
+      config.assets.pipeline do |condenser|
+        condenser.register_preprocessor('application/javascript', Condenser::JSAnalyzer)
+        condenser.register_postprocessor('text/css', ::Condenser::CSSMediaCombinerProcessor)
+        condenser.register_minifier('application/javascript', Condenser::TerserMinifier)
+        condenser.register_writer Condenser::ZlibWriter.new
+      end
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal env.templates, {"application/erb"=>Condenser::Erubi, "application/ejs"=>Condenser::EjsTemplate}
+    assert_equal env.preprocessors, {"application/javascript"=>[Condenser::JSAnalyzer]}
+    assert_equal env.transformers, {"text/scss"=>{"text/css"=>Condenser::ScssTransformer}, "application/jst"=>{"application/javascript"=>Condenser::JstTransformer}, "image/svg+xml"=>{"application/javascript"=>Condenser::SVGTransformer}}
+    assert_equal env.postprocessors, {"text/css"=>[Condenser::CSSMediaCombinerProcessor]}
+    assert_equal env.minifiers, {"application/javascript"=>Condenser::TerserMinifier}
+    assert_equal env.exporters, {}
+  end
+
+
   # def test_quiet_assets_defaults_to_off
   #   app.initialize!
   #   app.load_tasks

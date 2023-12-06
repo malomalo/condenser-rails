@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 2.5.0'
 
-  s.add_dependency "condenser", ">= 1.0.rc1"
+  s.add_dependency "condenser", ">= 1.3"
   s.add_dependency "actionpack", ">= 6.0"
   s.add_dependency "activesupport", ">= 6.0"
   s.add_development_dependency "railties", ">= 6.0"
