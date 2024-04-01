@@ -68,7 +68,7 @@ class Condenser::Railtie < ::Rails::Railtie
   
   config.assets.compile     = true
   config.assets.digest      = true
-  config.assets.cache_limit = 100.megabytes
+  config.assets.cache_limit = 1_000.megabytes
   config.assets.compressors = [:zlib]
 
   config.assets.configure do |app, env|
@@ -126,13 +126,7 @@ class Condenser::Railtie < ::Rails::Railtie
       config.assets._pipeline.call(env)
     else
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
-
-      if ::Rails.env == 'development'
-        env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
-      else
-        env.register_preprocessor 'application/javascript', Condenser::BabelProcessor
-      end
-    
+      env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
       env.register_exporter       'application/javascript', Condenser::RollupProcessor
 
       if ::Rails.env != 'development'
