@@ -76,20 +76,27 @@ module Condenser::Rails
 
       sources_tags = sources.uniq.map { |source|
         href = path_to_javascript(source, path_options)
+        integrity = if options["integrity"] == true
+          asset_integrity(source.to_s.delete_suffix('.js')+'.js')
+        elsif options["integrity"] != false
+          options["integrity"]
+        end
+        
         if use_preload_links_header && !options["defer"] && href.present? && !href.start_with?("data:")
           preload_link = "<#{href}>; rel=#{rel}; as=script"
           preload_link += "; crossorigin=#{crossorigin}" unless crossorigin.nil?
-          preload_link += "; integrity=#{asset_integrity(source.to_s.delete_suffix('.js')+'.js')}" unless integrity.nil?
+          preload_link += "; integrity=#{integrity}" unless integrity.nil?
           preload_link += "; nopush" if nopush
           preload_links << preload_link
         end
         tag_options = {
           "src" => href,
           "crossorigin" => crossorigin
-        }.merge!(options)
+        }.merge!(options.except('integrity'))
         if tag_options["nonce"] == true
           tag_options["nonce"] = content_security_policy_nonce
         end
+        tag_options['integrity'] = integrity if integrity
         
         content_tag("script", "", tag_options)
       }.join("\n").html_safe
@@ -110,14 +117,19 @@ module Condenser::Rails
       crossorigin = options.delete("crossorigin")
       crossorigin = "anonymous" if crossorigin == true
       nopush = options["nopush"].nil? ? true : options.delete("nopush")
-      integrity = options["integrity"]
-
+      
       sources_tags = sources.uniq.map { |source|
         href = path_to_stylesheet(source, path_options)
+        integrity = if options["integrity"] == true
+          asset_integrity(source.to_s.delete_suffix('.css')+'.css')
+        elsif options["integrity"] != false
+          options["integrity"]
+        end
+
         if use_preload_links_header && href.present? && !href.start_with?("data:")
           preload_link = "<#{href}>; rel=preload; as=style"
           preload_link += "; crossorigin=#{crossorigin}" unless crossorigin.nil?
-          preload_link += "; integrity=#{asset_integrity(source.to_s.delete_suffix('.css')+'.css')}" unless integrity.nil?
+          preload_link += "; integrity=#{integrity}" unless integrity.nil?
           preload_link += "; nopush" if nopush
           preload_links << preload_link
         end
@@ -125,10 +137,11 @@ module Condenser::Rails
           "rel" => "stylesheet",
           "crossorigin" => crossorigin,
           "href" => href
-        }.merge!(options)
+        }.merge!(options.except('integrity'))
         if tag_options["nonce"] == true
           tag_options["nonce"] = content_security_policy_nonce
         end
+        tag_options['integrity'] = integrity if integrity
 
         if apply_stylesheet_media_default && tag_options["media"].blank?
           tag_options["media"] = "screen"

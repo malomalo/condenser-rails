@@ -27,6 +27,7 @@ class BootTest < ActiveSupport::TestCase
     Dir.chdir @rails_root
 
     @app = Class.new(Rails::Application)
+    @app.config.load_defaults Rails.version.split('.').take(2).join('.').to_f
     @app.config.eager_load  = false
     @app.config.time_zone   = 'UTC'
     @app.config.middleware  ||= Rails::Configuration::MiddlewareStackProxy.new
