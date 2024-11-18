@@ -62,74 +62,84 @@ module Condenser::Rails
       asset_resolver.integrity(path)
     end
 
-    # Override javascript tag helper to provide debugging support.
-    #
-    # Eventually will be deprecated and replaced by source maps.
+    # TODO: perhaps prepend this function and add integrity if set to true?
     def javascript_include_tag(*sources)
       options = sources.extract_options!.stringify_keys
       path_options = options.extract!("protocol", "extname", "host", "skip_pipeline").symbolize_keys
-      early_hints_links = []
+      preload_links = []
+      use_preload_links_header = options["preload_links_header"].nil? ? preload_links_header : options.delete("preload_links_header")
+      nopush = options["nopush"].nil? ? true : options.delete("nopush")
+      crossorigin = options.delete("crossorigin")
+      crossorigin = "anonymous" if crossorigin == true
+      integrity = asset_integrity(source.to_s.delete_suffix('.js')+'.js') if options["integrity"]
+      rel = options["type"] == "module" ? "modulepreload" : "preload"
 
       sources_tags = sources.uniq.map { |source|
         href = path_to_javascript(source, path_options)
-        early_hints_links << "<#{href}>; rel=preload; as=script"
+        if use_preload_links_header && !options["defer"] && href.present? && !href.start_with?("data:")
+          preload_link = "<#{href}>; rel=#{rel}; as=script"
+          preload_link += "; crossorigin=#{crossorigin}" unless crossorigin.nil?
+          preload_link += "; integrity=#{integrity}" unless integrity.nil?
+          preload_link += "; nopush" if nopush
+          preload_links << preload_link
+        end
         tag_options = {
-          "src" => href
+          "src" => href,
+          "crossorigin" => crossorigin
         }.merge!(options)
-        
         if tag_options["nonce"] == true
           tag_options["nonce"] = content_security_policy_nonce
-        end
-        
-        if secure_subresource_integrity_context?
-          if tag_options["integrity"] == true
-            tag_options["integrity"] = asset_integrity(source.to_s.delete_suffix('.js')+'.js')
-          elsif tag_options["integrity"] == false
-            tag_options.delete('integrity')
-          end
-        else
-          tag_options.delete('integrity')
         end
         
         content_tag("script", "", tag_options)
       }.join("\n").html_safe
 
-      request.send_early_hints("Link" => early_hints_links.join("\n")) if respond_to?(:request) && request
+      if use_preload_links_header
+        send_preload_links_header(preload_links)
+      end
 
       sources_tags
     end
 
-    # Override stylesheet tag helper to provide debugging support.
-    #
-    # Eventually will be deprecated and replaced by source maps.
+    # TODO: perhaps prepend this function and add integrity if set to true?
     def stylesheet_link_tag(*sources)
       options = sources.extract_options!.stringify_keys
-      path_options = options.extract!("protocol", "host", "skip_pipeline").symbolize_keys
-      early_hints_links = []
+      path_options = options.extract!("protocol", "extname", "host", "skip_pipeline").symbolize_keys
+      use_preload_links_header = options["preload_links_header"].nil? ? preload_links_header : options.delete("preload_links_header")
+      preload_links = []
+      crossorigin = options.delete("crossorigin")
+      crossorigin = "anonymous" if crossorigin == true
+      nopush = options["nopush"].nil? ? true : options.delete("nopush")
+      integrity = asset_integrity(source.to_s.delete_suffix('.css')+'.css') if options["integrity"]
 
       sources_tags = sources.uniq.map { |source|
         href = path_to_stylesheet(source, path_options)
-        early_hints_links << "<#{href}>; rel=preload; as=style"
+        if use_preload_links_header && href.present? && !href.start_with?("data:")
+          preload_link = "<#{href}>; rel=preload; as=style"
+          preload_link += "; crossorigin=#{crossorigin}" unless crossorigin.nil?
+          preload_link += "; integrity=#{integrity}" unless integrity.nil?
+          preload_link += "; nopush" if nopush
+          preload_links << preload_link
+        end
         tag_options = {
           "rel" => "stylesheet",
-          "media" => "screen",
+          "crossorigin" => crossorigin,
           "href" => href
         }.merge!(options)
-        
-        if secure_subresource_integrity_context?
-          if tag_options["integrity"] == true
-            tag_options["integrity"] = asset_integrity(source.to_s.delete_suffix('.css')+'.css')
-          elsif tag_options["integrity"] == false
-            tag_options.delete('integrity')
-          end
-        else
-          tag_options.delete('integrity')
+        if tag_options["nonce"] == true
+          tag_options["nonce"] = content_security_policy_nonce
         end
 
+        if apply_stylesheet_media_default && tag_options["media"].blank?
+          tag_options["media"] = "screen"
+        end
+        
         tag(:link, tag_options)
       }.join("\n").html_safe
 
-      request.send_early_hints("Link" => early_hints_links.join("\n")) if respond_to?(:request) && request
+      if use_preload_links_header
+        send_preload_links_header(preload_links)
+      end
 
       sources_tags
     end
@@ -201,7 +211,7 @@ module Condenser::Rails
       end
 
       def integrity(path)
-        @env.find(path)&.integrity
+        @env.find(path)&.export&.integrity
       end
 
       private
