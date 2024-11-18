@@ -71,7 +71,7 @@ module Condenser::Rails
       nopush = options["nopush"].nil? ? true : options.delete("nopush")
       crossorigin = options.delete("crossorigin")
       crossorigin = "anonymous" if crossorigin == true
-      integrity = asset_integrity(source.to_s.delete_suffix('.js')+'.js') if options["integrity"]
+      integrity = options["integrity"]
       rel = options["type"] == "module" ? "modulepreload" : "preload"
 
       sources_tags = sources.uniq.map { |source|
@@ -79,7 +79,7 @@ module Condenser::Rails
         if use_preload_links_header && !options["defer"] && href.present? && !href.start_with?("data:")
           preload_link = "<#{href}>; rel=#{rel}; as=script"
           preload_link += "; crossorigin=#{crossorigin}" unless crossorigin.nil?
-          preload_link += "; integrity=#{integrity}" unless integrity.nil?
+          preload_link += "; integrity=#{asset_integrity(source.to_s.delete_suffix('.js')+'.js')}" unless integrity.nil?
           preload_link += "; nopush" if nopush
           preload_links << preload_link
         end
@@ -110,14 +110,14 @@ module Condenser::Rails
       crossorigin = options.delete("crossorigin")
       crossorigin = "anonymous" if crossorigin == true
       nopush = options["nopush"].nil? ? true : options.delete("nopush")
-      integrity = asset_integrity(source.to_s.delete_suffix('.css')+'.css') if options["integrity"]
+      integrity = options["integrity"]
 
       sources_tags = sources.uniq.map { |source|
         href = path_to_stylesheet(source, path_options)
         if use_preload_links_header && href.present? && !href.start_with?("data:")
           preload_link = "<#{href}>; rel=preload; as=style"
           preload_link += "; crossorigin=#{crossorigin}" unless crossorigin.nil?
-          preload_link += "; integrity=#{integrity}" unless integrity.nil?
+          preload_link += "; integrity=#{asset_integrity(source.to_s.delete_suffix('.css')+'.css')}" unless integrity.nil?
           preload_link += "; nopush" if nopush
           preload_links << preload_link
         end
