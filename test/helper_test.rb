@@ -49,6 +49,8 @@ class HelperTest < ActionView::TestCase
   def teardown
     FileUtils.remove_entry(@path, true) if @path
   end
+  
+  
 
   # def test_foo_and_bar_different_digests
   #   refute_equal @foo_js_digest, @bar_js_digest
@@ -68,6 +70,18 @@ class HelperTest < ActionView::TestCase
   # end
 end
 
+class SVGTest < HelperTest
+  def setup
+    super
+    file 'box.svg', %(<svg width=16 height=16 viewBox="0 0 16 16"><rect x="9" y="9" width="16" height="16" rx="5"/></svg>)
+  end
+  
+  def test_svg_tag
+    assert_equal %(<svg width=16 height=16 viewBox="0 0 16 16"><rect x="9" y="9" width="16" height="16" rx="5"/></svg>), @view.svg_tag("box")
+    assert_equal %(<svg viewBox="0 0 16 16" width="24" height="24" fill="red"><rect x="9" y="9" width="16" height="16" rx="5"/></svg>), @view.svg_tag("box", width: 24, height: 24, fill: 'red')
+  end
+end
+
 class NoHostHelperTest < HelperTest
 
   def setup
@@ -80,6 +94,7 @@ class NoHostHelperTest < HelperTest
     file 'another.css',           "body { background: red; }"
     file 'bank.css',              "body { background: green; }"
     file 'subdir/subdir.css',     "body { background: yellow; }"
+    file 'box.svg', %(<svg width=16 height=16 viewBox="0 0 16 16"><rect x="9" y="9" width="16" height="16" rx="5"/></svg>)
     
     @view.assets_precompile = %w(
       application.js
@@ -90,7 +105,7 @@ class NoHostHelperTest < HelperTest
       bank.css
       subdir/subdir.css
     )
-    
+
     @view.request = ActionDispatch::Request.new({ "rack.url_scheme" => "https" })
   end
 
