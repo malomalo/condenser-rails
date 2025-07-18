@@ -61,6 +61,16 @@ module Condenser::Rails
     def asset_integrity(path, options = {})
       asset_resolver.integrity(path)
     end
+    
+    # Get type for asset path. (module or nil for javascript)
+    #
+    # path    - String path
+    # options - Hash options
+    #
+    # Returns String integrity attribute or nil if no asset was found.
+    def asset_type(path, options = {})
+      asset_resolver.type(path)
+    end
 
     # TODO: perhaps prepend this function and add integrity if set to true?
     def javascript_include_tag(*sources)
@@ -72,7 +82,6 @@ module Condenser::Rails
       crossorigin = options.delete("crossorigin")
       crossorigin = "anonymous" if crossorigin == true
       integrity = options["integrity"]
-      rel = options["type"] == "module" ? "modulepreload" : "preload"
 
       sources_tags = sources.uniq.map { |source|
         href = path_to_javascript(source, path_options)
@@ -81,11 +90,14 @@ module Condenser::Rails
         elsif options["integrity"] != false
           options["integrity"]
         end
+        options["type"] ||= asset_type(source.to_s.delete_suffix('.js')+'.js')
+        rel = options["type"] == "module" ? "modulepreload" : "preload"
         
         if use_preload_links_header && !options["defer"] && href.present? && !href.start_with?("data:")
           preload_link = "<#{href}>; rel=#{rel}; as=script"
           preload_link += "; crossorigin=#{crossorigin}" unless crossorigin.nil?
           preload_link += "; integrity=#{integrity}" unless integrity.nil?
+          preload_link += "; nonce=#{content_security_policy_nonce}" if options["nonce"] == true
           preload_link += "; nopush" if nopush
           preload_links << preload_link
         end
@@ -202,9 +214,12 @@ module Condenser::Rails
       end
 
       def integrity(path)
-        @manifest[path]['integrity']
+        @manifest[path]&.[]('integrity')
       end
 
+      def type(path)
+        @manifest[path]&.[]('type')
+      end
     end
 
     class Environment #:nodoc:
@@ -225,6 +240,10 @@ module Condenser::Rails
 
       def integrity(path)
         @env.find(path)&.export&.integrity
+      end
+
+      def type(path)
+        @env.find(path)&.export&.type
       end
 
       private
