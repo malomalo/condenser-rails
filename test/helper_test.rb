@@ -95,22 +95,22 @@ class NoHostHelperTest < HelperTest
   end
 
   def test_javascript_include_tag
-    assert_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js"></script>),
+    assert_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" type="module"></script>),
       @view.javascript_include_tag("application")
-    assert_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js"></script>),
+    assert_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" type="module"></script>),
       @view.javascript_include_tag("application.js")
-    assert_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js"></script>),
+    assert_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" type="module"></script>),
       @view.javascript_include_tag(:application)
-    assert_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js"></script>\n) +
-      %(<script src="/assets/another-139c4fa2c31ac33093727cb2bce821e44edafdf50a2ac130a7887ac7de418d28.js"></script>),
+    assert_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" type="module"></script>\n) +
+      %(<script src="/assets/another-17b2b6d81627810d5f72731cb894b21f8a767b3f80c1b716402b56c8c88aa253.js" type="module"></script>),
       @view.javascript_include_tag(:application, 'another')
 
-    assert_equal %(<script src="/application.js"></script>),
+    assert_equal %(<script src="/application.js" type="module"></script>),
       @view.javascript_include_tag("/application")
-    assert_equal %(<script src="/application.js"></script>),
+    assert_equal %(<script src="/application.js" type="module"></script>),
       @view.javascript_include_tag("/application.js")
-    assert_equal %(<script src="/application.js"></script>\n) +
-      %(<script src="/assets/another-139c4fa2c31ac33093727cb2bce821e44edafdf50a2ac130a7887ac7de418d28.js"></script>),
+    assert_equal %(<script src="/application.js" type="module"></script>\n) +
+      %(<script src="/assets/another-17b2b6d81627810d5f72731cb894b21f8a767b3f80c1b716402b56c8c88aa253.js" type="module"></script>),
       @view.javascript_include_tag("/application.js", 'another.js')
 
     assert_equal %(<script src="http://example.com/script"></script>),
@@ -120,23 +120,26 @@ class NoHostHelperTest < HelperTest
     assert_equal %(<script src="//example.com/script.js"></script>),
       @view.javascript_include_tag("//example.com/script.js")
 
-    assert_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js" defer="defer"></script>),
+    assert_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" defer="defer" type="module"></script>),
       @view.javascript_include_tag("application", defer: "defer")
-    assert_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js" async="async"></script>),
+    assert_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" async="async" type="module"></script>),
       @view.javascript_include_tag("application", async: "async")
+      
+    assert_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js"></script>),
+      @view.javascript_include_tag("application", type: false)
   end
 
   def test_stylesheet_link_tag
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" rel="stylesheet" />),
+    assert_dom_equal %(<link rel="stylesheet" href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" />),
       @view.stylesheet_link_tag("application")
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" rel="stylesheet" />),
+    assert_dom_equal %(<link rel="stylesheet" href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" />),
       @view.stylesheet_link_tag("application.css")
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" rel="stylesheet" />),
+    assert_dom_equal %(<link rel="stylesheet" href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" />),
       @view.stylesheet_link_tag(:application)
 
-    assert_dom_equal %(<link href="/elsewhere.css" rel="stylesheet" />),
+    assert_dom_equal %(<link rel="stylesheet" href="/elsewhere.css" />),
       @view.stylesheet_link_tag("/elsewhere.css")
-    assert_dom_equal %(<link href="/style1.css" rel="stylesheet" />\n<link href="/assets/another-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css" rel="stylesheet" />),
+    assert_dom_equal %(<link rel="stylesheet" href="/style1.css" />\n<link rel="stylesheet" href="/assets/another-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css" />),
       @view.stylesheet_link_tag("/style1.css", "another.css")
 
     assert_dom_equal %(<link href="http://www.example.com/styles/style" rel="stylesheet" />),
@@ -146,60 +149,61 @@ class NoHostHelperTest < HelperTest
     assert_dom_equal %(<link href="//www.example.com/styles/style.css" rel="stylesheet" />),
       @view.stylesheet_link_tag("//www.example.com/styles/style.css")
 
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" media="print" rel="stylesheet" />),
+    assert_dom_equal %(<link href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" media="print" rel="stylesheet" />),
       @view.stylesheet_link_tag("application", media: "print")
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" media="&lt;hax&gt;" rel="stylesheet" />),
+    assert_dom_equal %(<link href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" media="&lt;hax&gt;" rel="stylesheet" />),
       @view.stylesheet_link_tag("application", media: "<hax>")
   end
 
   def test_javascript_include_tag_integrity
-    assert_dom_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js" integrity="sha-256-TvVUHzSfftWg1rcfL6TIJ0XKEGrgLyEq6lEpcmrG9qs="></script>),
+    assert_dom_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" type="module" integrity="sha-256-TvVUHzSfftWg1rcfL6TIJ0XKEGrgLyEq6lEpcmrG9qs="></script>),
       @view.javascript_include_tag("application", integrity: "sha-256-TvVUHzSfftWg1rcfL6TIJ0XKEGrgLyEq6lEpcmrG9qs=")
 
-    assert_dom_equal %(<script integrity="#{@view.resolve_assets_with == :manifest ? "sha256-9kV9pQYSIDeJBtbIKoPRDtvAssQnCWcDhAnKiPWJpEQ=" : "sha256-9kV9pQYSIDeJBtbIKoPRDtvAssQnCWcDhAnKiPWJpEQ=" }" src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js"></script>),
+    assert_dom_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" type="module" integrity="#{@view.resolve_assets_with == :manifest ? "sha256-9kV9pQYSIDeJBtbIKoPRDtvAssQnCWcDhAnKiPWJpEQ=" : "sha256-9kV9pQYSIDeJBtbIKoPRDtvAssQnCWcDhAnKiPWJpEQ=" }"></script>),
       @view.javascript_include_tag("application", integrity: true)
-    assert_dom_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js"></script>),
+    assert_dom_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" type="module"></script>),
       @view.javascript_include_tag("application", integrity: false)
-    assert_dom_equal %(<script src="/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js"></script>),
+    assert_dom_equal %(<script src="/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js" type="module"></script>),
       @view.javascript_include_tag("application", integrity: nil)
   end
 
   def test_stylesheet_link_tag_integrity
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" rel="stylesheet" integrity="sha-256-5YzTQPuOJz/EpeXfN/+v1sxsjAj/dw8q26abiHZM3A4=" />),
+    assert_dom_equal %(<link href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" rel="stylesheet" integrity="sha-256-5YzTQPuOJz/EpeXfN/+v1sxsjAj/dw8q26abiHZM3A4=" />),
       @view.stylesheet_link_tag("application", integrity: "sha-256-5YzTQPuOJz/EpeXfN/+v1sxsjAj/dw8q26abiHZM3A4=")
 
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" rel="stylesheet" integrity="#{@view.resolve_assets_with == :manifest ? "sha256-1iLtRg3hwgI7jE88KFY8Tb1GytKXp/d0/AIdA3EV8ss=" : "sha256-1iLtRg3hwgI7jE88KFY8Tb1GytKXp/d0/AIdA3EV8ss="}" />),
+    assert_dom_equal %(<link href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" rel="stylesheet" integrity="#{@view.resolve_assets_with == :manifest ? "sha256-1iLtRg3hwgI7jE88KFY8Tb1GytKXp/d0/AIdA3EV8ss=" : "sha256-1iLtRg3hwgI7jE88KFY8Tb1GytKXp/d0/AIdA3EV8ss="}" />),
       @view.stylesheet_link_tag("application", integrity: true)
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" rel="stylesheet" />),
+    assert_dom_equal %(<link href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" rel="stylesheet" />),
       @view.stylesheet_link_tag("application", integrity: false)
-    assert_dom_equal %(<link href="/assets/application-d622ed460de1c2023b8c4f3c28563c4dbd46cad297a7f774fc021d037115f2cb.css" rel="stylesheet" />),
+    assert_dom_equal %(<link href="/assets/application-dc843838433caa9dec0db166d3cb69a11394e6fb097e580ba4aea045178db580.css" rel="stylesheet" />),
       @view.stylesheet_link_tag("application", integrity: nil)
   end
 
   def test_javascript_path
-    assert_equal "/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js", @view.javascript_path("application")
-    assert_equal "/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js", @view.javascript_path("application.js")
-    assert_equal "/assets/subdir/application-66535e7d18466081852709135d6a32372f07f18aff60be905b7112469db521b0.js", @view.javascript_path("subdir/application")
-    assert_equal "/assets/subdir/application-66535e7d18466081852709135d6a32372f07f18aff60be905b7112469db521b0.js", @view.javascript_path("subdir/application.js")
+    assert_equal "/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js", @view.javascript_path("application")
+    assert_equal "/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js", @view.javascript_path("application.js")
+    assert_equal "/assets/subdir/application-195e7cd1509750f122fb38917ca959bf7cec829410409ae70586766f14f7b270.js", @view.javascript_path("subdir/application")
+    assert_equal "/assets/subdir/application-195e7cd1509750f122fb38917ca959bf7cec829410409ae70586766f14f7b270.js", @view.javascript_path("subdir/application.js")
 
-    assert_equal "/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js?foo=1", @view.javascript_path("application.js?foo=1")
-    assert_equal "/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js?foo=1", @view.javascript_path("application?foo=1")
-    assert_equal "/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js#hash", @view.javascript_path("application.js#hash")
-    assert_equal "/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js#hash", @view.javascript_path("application#hash")
-    assert_equal "/assets/application-f6457da5061220378906d6c82a83d10edbc0b2c4270967038409ca88f589a444.js?foo=1#hash", @view.javascript_path("application.js?foo=1#hash")
+    assert_equal "/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js?foo=1", @view.javascript_path("application.js?foo=1")
+    assert_equal "/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js?foo=1", @view.javascript_path("application?foo=1")
+    assert_equal "/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js#hash", @view.javascript_path("application.js#hash")
+    assert_equal "/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js#hash", @view.javascript_path("application#hash")
+    assert_equal "/assets/application-e1b35a41eb094bf83ddf17f57ad2b54bbb60c53a4fcdd813a230de537cec46fc.js?foo=1#hash", @view.javascript_path("application.js?foo=1#hash")
   end
 
-  def test_stylesheet_path
-    assert_equal "/assets/bank-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css", @view.stylesheet_path("bank")
-    assert_equal "/assets/bank-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css", @view.stylesheet_path("bank.css")
-    assert_equal "/assets/subdir/subdir-fc40211db38a80d1bcf40092cb09a91a164fcbc9f4fc06f554d53f990d738428.css", @view.stylesheet_path("subdir/subdir")
-    assert_equal "/assets/subdir/subdir-fc40211db38a80d1bcf40092cb09a91a164fcbc9f4fc06f554d53f990d738428.css", @view.stylesheet_path("subdir/subdir.css")
 
-    assert_equal "/assets/bank-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css?foo=1", @view.stylesheet_path("bank.css?foo=1")
-    assert_equal "/assets/bank-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css?foo=1", @view.stylesheet_path("bank?foo=1")
-    assert_equal "/assets/bank-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css#hash", @view.stylesheet_path("bank.css#hash")
-    assert_equal "/assets/bank-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css#hash", @view.stylesheet_path("bank#hash")
-    assert_equal "/assets/bank-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css?foo=1#hash", @view.stylesheet_path("bank.css?foo=1#hash")
+  def test_stylesheet_path
+    assert_equal "/assets/bank-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css", @view.stylesheet_path("bank")
+    assert_equal "/assets/bank-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css", @view.stylesheet_path("bank.css")
+    assert_equal "/assets/subdir/subdir-48eff800c289349141dd41b7dcf0b8ab098cb77f0590471ba4331a507bd5de07.css", @view.stylesheet_path("subdir/subdir")
+    assert_equal "/assets/subdir/subdir-48eff800c289349141dd41b7dcf0b8ab098cb77f0590471ba4331a507bd5de07.css", @view.stylesheet_path("subdir/subdir.css")
+
+    assert_equal "/assets/bank-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css?foo=1", @view.stylesheet_path("bank.css?foo=1")
+    assert_equal "/assets/bank-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css?foo=1", @view.stylesheet_path("bank?foo=1")
+    assert_equal "/assets/bank-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css#hash", @view.stylesheet_path("bank.css#hash")
+    assert_equal "/assets/bank-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css#hash", @view.stylesheet_path("bank#hash")
+    assert_equal "/assets/bank-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css?foo=1#hash", @view.stylesheet_path("bank.css?foo=1#hash")
   end
 end
 
@@ -214,26 +218,26 @@ class NoSSLHelperTest < NoHostHelperTest
   def test_javascript_include_tag_integrity
     file 'application.js',  'console.log(1);'
 
-    assert_dom_equal %(<script src="/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js"></script>),
+    assert_dom_equal %(<script src="/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js" type="module" integrity="sha-256-TvVUHzSfftWg1rcfL6TIJ0XKEGrgLyEq6lEpcmrG9qs="></script>),
       @view.javascript_include_tag("application", integrity: "sha-256-TvVUHzSfftWg1rcfL6TIJ0XKEGrgLyEq6lEpcmrG9qs=")
 
-    assert_dom_equal %(<script src="/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js"></script>),
+    assert_dom_equal %(<script src="/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js" type="module" integrity="sha256-NcFG924SlHfGQGG8hFEeEJDz1NgFlxPmZj3Us1sfdkI="></script>),
       @view.javascript_include_tag("application", integrity: true)
-    assert_dom_equal %(<script src="/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js"></script>),
+    assert_dom_equal %(<script src="/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js" type="module"></script>),
       @view.javascript_include_tag("application", integrity: false)
-    assert_dom_equal %(<script src="/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js"></script>),
+    assert_dom_equal %(<script src="/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js" type="module"></script>),
       @view.javascript_include_tag("application", integrity: nil)
   end
 
   def test_stylesheet_link_tag_integrity
     file 'application.css',  'body { background: green; }'
 
-    assert_dom_equal %(<link href="/assets/application-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css" rel="stylesheet" />),
+    assert_dom_equal %(<link rel="stylesheet" href="/assets/application-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css" integrity="sha-256-5YzTQPuOJz/EpeXfN/+v1sxsjAj/dw8q26abiHZM3A4=" />),
       @view.stylesheet_link_tag("application", integrity: "sha-256-5YzTQPuOJz/EpeXfN/+v1sxsjAj/dw8q26abiHZM3A4=")
 
-    assert_dom_equal %(<link href="/assets/application-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css" rel="stylesheet" />),
+    assert_dom_equal %(<link rel="stylesheet" href="/assets/application-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css" integrity="sha256-qKM35DYeB5JU9ACLe6nIaxlGU1FGVjxpzHWcrymRUbA=" />),
       @view.stylesheet_link_tag("application", integrity: true)
-    assert_dom_equal %(<link href="/assets/application-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css" rel="stylesheet" />),
+    assert_dom_equal %(<link rel="stylesheet" href="/assets/application-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css" />),
       @view.stylesheet_link_tag("application", integrity: false)
   end
 
@@ -274,11 +278,11 @@ class RelativeHostHelperTest < HelperTest
     assert_equal "https://assets.example.com/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js#hash", @view.javascript_path("application#hash")
     assert_equal "https://assets.example.com/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js?foo=1#hash", @view.javascript_path("application.js?foo=1#hash")
 
-    assert_dom_equal %(<script src="https://assets.example.com/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js"></script>),
+    assert_dom_equal %(<script src="https://assets.example.com/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js" type="module"></script>),
       @view.javascript_include_tag("application")
-    assert_dom_equal %(<script src="https://assets.example.com/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js"></script>),
+    assert_dom_equal %(<script src="https://assets.example.com/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js" type="module"></script>),
       @view.javascript_include_tag("application.js")
-    assert_dom_equal %(<script src="https://assets.example.com/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js"></script>),
+    assert_dom_equal %(<script src="https://assets.example.com/assets/application-35c146f76e129477c64061bc84511e1090f3d4d8059713e6663dd4b35b1f7642.js" type="module"></script>),
       @view.javascript_include_tag(:application)
   end
 
@@ -287,22 +291,22 @@ class RelativeHostHelperTest < HelperTest
     file 'subdir/subdir.css',   'body { background: green; }'
     @view.assets_precompile = %w( bank.css subdir/subdir.css )
     
-    assert_equal "https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css", @view.stylesheet_path("bank")
-    assert_equal "https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css", @view.stylesheet_path("bank.css")
-    assert_equal "https://assets.example.com/assets/subdir/subdir-a8a337e4361e079254f4008b7ba9c86b1946535146563c69cc759caf299151b0.css", @view.stylesheet_path("subdir/subdir")
+    assert_equal "https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css", @view.stylesheet_path("bank")
+    assert_equal "https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css", @view.stylesheet_path("bank.css")
+    assert_equal "https://assets.example.com/assets/subdir/subdir-39c6ed7372d209cb3d8b85797161b7cadc7fa0c76370479dbe543f6c11c30b06.css", @view.stylesheet_path("subdir/subdir")
     assert_equal "https://assets.example.com/subdir/subdir.css", @view.stylesheet_path("/subdir/subdir.css")
 
-    assert_equal "https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css?foo=1", @view.stylesheet_path("bank.css?foo=1")
-    assert_equal "https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css?foo=1", @view.stylesheet_path("bank?foo=1")
-    assert_equal "https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css#hash", @view.stylesheet_path("bank.css#hash")
-    assert_equal "https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css#hash", @view.stylesheet_path("bank#hash")
-    assert_equal "https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css?foo=1#hash", @view.stylesheet_path("bank.css?foo=1#hash")
+    assert_equal "https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css?foo=1", @view.stylesheet_path("bank.css?foo=1")
+    assert_equal "https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css?foo=1", @view.stylesheet_path("bank?foo=1")
+    assert_equal "https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css#hash", @view.stylesheet_path("bank.css#hash")
+    assert_equal "https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css#hash", @view.stylesheet_path("bank#hash")
+    assert_equal "https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css?foo=1#hash", @view.stylesheet_path("bank.css?foo=1#hash")
 
-    assert_dom_equal %(<link href="https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css" rel="stylesheet" />),
+    assert_dom_equal %(<link href="https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css" rel="stylesheet" />),
       @view.stylesheet_link_tag("bank")
-    assert_dom_equal %(<link href="https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css" rel="stylesheet" />),
+    assert_dom_equal %(<link href="https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css" rel="stylesheet" />),
       @view.stylesheet_link_tag("bank.css")
-    assert_dom_equal %(<link href="https://assets.example.com/assets/bank-98fde70fc322d1c369e1e381081b7f25e84ea64f780f7b61827523c2307e08e7.css" rel="stylesheet" />),
+    assert_dom_equal %(<link href="https://assets.example.com/assets/bank-10d0673a5eddb1b08e8b1a8ef24457352a87d62f4bca8ad2d903af281d2659d6.css" rel="stylesheet" />),
       @view.stylesheet_link_tag(:bank)
   end
 

@@ -186,7 +186,7 @@ class TestRailtie < BootTest
   # end
   #
   def test_action_view_helper
-    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s,  "var Foo;"
+    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s,  "var Foo = 1; console.log(Foo);"
     
     app.configure do
       config.assets.precompile += ["foo.js"]
@@ -201,7 +201,7 @@ class TestRailtie < BootTest
     assert_equal app.assets_manifest, ActionView::Base.assets_manifest
 
     @view = action_view
-    assert_equal "/assets/foo-44df8a0ae3d5a3c2716e204f54d8fe28e5ca5da2f70e85f6b86a8aaf83e0d85e.js", @view.javascript_path("foo")
+    assert_equal "/assets/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js", @view.javascript_path("foo")
 
     env = @view.assets
     assert_kind_of Condenser, env
@@ -266,7 +266,7 @@ class TestRailtie < BootTest
   end
 
   def test_task_precompile
-    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s,  "var Foo;"
+    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s,  "var Foo = 1; console.log(Foo);"
     
     app.configure do
       config.assets.precompile = ["foo.js"]
@@ -274,7 +274,7 @@ class TestRailtie < BootTest
     app.initialize!
     app.load_tasks
 
-    path = "#{app.assets_manifest.dir}/foo-44df8a0ae3d5a3c2716e204f54d8fe28e5ca5da2f70e85f6b86a8aaf83e0d85e.js"
+    path = "#{app.assets_manifest.dir}/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
@@ -293,7 +293,7 @@ class TestRailtie < BootTest
   end
 
   def test_task_precompile_compile_false
-    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s,  "var Foo;"
+    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s,  "var Foo = 1; console.log(Foo);"
 
     app.configure do
       config.assets.compile = false
@@ -302,7 +302,7 @@ class TestRailtie < BootTest
     app.initialize!
     app.load_tasks
 
-    path = "#{app.assets_manifest.dir}/foo-44df8a0ae3d5a3c2716e204f54d8fe28e5ca5da2f70e85f6b86a8aaf83e0d85e.js"
+    path = "#{app.assets_manifest.dir}/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute

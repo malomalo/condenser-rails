@@ -90,7 +90,11 @@ module Condenser::Rails
         elsif options["integrity"] != false
           options["integrity"]
         end
-        options["type"] ||= asset_type(source.to_s.delete_suffix('.js')+'.js')
+        type = if !options.has_key?('type')
+          asset_type(source.to_s.delete_suffix('.js')+'.js') 
+        else
+          options["type"]
+        end
         rel = options["type"] == "module" ? "modulepreload" : "preload"
         
         if use_preload_links_header && !options["defer"] && href.present? && !href.start_with?("data:")
@@ -104,10 +108,11 @@ module Condenser::Rails
         tag_options = {
           "src" => href,
           "crossorigin" => crossorigin
-        }.merge!(options.except('integrity'))
+        }.merge!(options.except('integrity', 'type'))
         if tag_options["nonce"] == true
           tag_options["nonce"] = content_security_policy_nonce
         end
+        tag_options['type'] = type if type
         tag_options['integrity'] = integrity if integrity
         
         content_tag("script", "", tag_options)
@@ -210,15 +215,15 @@ module Condenser::Rails
       end
 
       def asset_path(path)
-        @manifest[path]['path']
+        @manifest[path][:path]
       end
 
       def integrity(path)
-        @manifest[path]&.[]('integrity')
+        @manifest[path]&.[](:integrity)
       end
 
       def type(path)
-        @manifest[path]&.[]('type')
+        @manifest[path]&.[](:type)
       end
     end
 
