@@ -173,6 +173,22 @@ module Condenser::Rails
 
       sources_tags
     end
+    
+    def svg_tag(path, options=nil)
+      source = assets.find(path).to_s
+      if options
+        tag = source.match(/<svg[^>]*>/)[0]
+        attributes = {}
+        tag.scan(/([a-zA-Z\-]+)\=\"([^\"]+)\"/).each do |match|
+          attributes[match[0]] = match[1]
+        end
+        options.each do |k, v|
+          attributes[k.to_s] = v
+        end
+        source = source.sub(/<svg[^>]*>/, "<svg#{attributes.map{|k, v| " #{k}=\"#{v}\""}.join("")}>")
+      end
+      source.html_safe
+    end
 
     protected
       # Only serve integrity metadata for HTTPS requests:
