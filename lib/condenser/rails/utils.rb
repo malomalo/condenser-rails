@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # based on http://cpan.uwinnipeg.ca/htdocs/Text-Glob/Text/Glob.pm.html#glob_to_regex_string from https://github.com/alexch/rerun/blob/master/lib/rerun/glob.rb
 
 module Condenser::Rails

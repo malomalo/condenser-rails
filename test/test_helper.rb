@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # To make testing/debugging easier, test within this source tree versus an
 # installed gem
 $LOAD_PATH << File.expand_path('../lib', __FILE__)
