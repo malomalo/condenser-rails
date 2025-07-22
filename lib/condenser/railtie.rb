@@ -164,7 +164,7 @@ class Condenser::Railtie < ::Rails::Railtie
       app.assets = self.build_environment(app, true)
       require 'condenser/server'
       app.routes.prepend do
-        mount Condenser::Server.new(app.assets, logger: Rails.logger) => config.assets.prefix
+        mount Condenser::Server.new(app.assets, logger: Rails.logger), at: config.assets.prefix
       end
     end
 
