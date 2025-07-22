@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
 
   s.files = Dir["README.md", "lib/**/*.rb", "LICENSE"]
 
-  s.required_ruby_version = '>= 2.5.0'
+  s.required_ruby_version = '>= 3.2.0'
 
   s.add_dependency "condenser", ">= 1.5.1"
   s.add_dependency "actionpack", ">= 6.0"
