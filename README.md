@@ -11,6 +11,15 @@ gem 'condenser-rails'
 Or alternatively `require 'condenser/railtie'` in your `config/application.rb`
 if you have Bundler auto-require disabled.
 
+### Sass
+
+Sass and SCSS are compiled with [Sass Embedded](https://github.com/sass-contrib/sass-embedded-host-ruby).
+Add the `sass-embedded` gem to your application's Gemfile:
+
+``` ruby
+gem 'sass-embedded'
+```
+
 ## Usage
 
 ### Rake task
