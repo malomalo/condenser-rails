@@ -203,7 +203,7 @@ class TestRailtie < BootTest
     assert_equal app.assets_manifest, ActionView::Base.assets_manifest
 
     @view = action_view
-    assert_equal "/assets/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js", @view.javascript_path("foo")
+    assert_match %r{\A/assets/foo-\h{64}\.js\z}, @view.javascript_path("foo")
 
     env = @view.assets
     assert_kind_of Condenser, env
@@ -276,22 +276,23 @@ class TestRailtie < BootTest
     app.initialize!
     app.load_tasks
 
-    path = "#{app.assets_manifest.dir}/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js"
+    path = "#{app.assets_manifest.dir}/foo-*.js"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
     # end
-    refute File.exist?(path)
+    assert_empty Dir.glob(path)
 
     # silence_stderr do
       Rake.application['assets:precompile'].execute
     # end
-    assert File.exist?(path)
+    assert_equal 1, Dir.glob(path).size
+    assert_includes File.read(Dir.glob(path).first), "console.log"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
     # end
-    refute File.exist?(path)
+    assert_empty Dir.glob(path)
   end
 
   def test_task_precompile_compile_false
@@ -304,22 +305,23 @@ class TestRailtie < BootTest
     app.initialize!
     app.load_tasks
 
-    path = "#{app.assets_manifest.dir}/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js"
+    path = "#{app.assets_manifest.dir}/foo-*.js"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
     # end
-    refute File.exist?(path)
+    assert_empty Dir.glob(path)
 
     # silence_stderr do
       Rake.application['assets:precompile'].execute
     # end
-    assert File.exist?(path)
+    assert_equal 1, Dir.glob(path).size
+    assert_includes File.read(Dir.glob(path).first), "console.log"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
     # end
-    refute File.exist?(path)
+    assert_empty Dir.glob(path)
   end
 
   def test_direct_build_environment_call

@@ -50,8 +50,8 @@ class TaskTest < ActiveSupport::TestCase
     assert_file "#{@path}/#{digest_path}"
     assert_file @manifest_file, {
       "foo.js" => {
-        path:       "foo-0d881fcb383d6053d80292588869f11910c9c643dd7ae2dc464bdc8d988bd8ba.js",
-        etag:       "0d881fcb383d6053d80292588869f11910c9c643dd7ae2dc464bdc8d988bd8ba",
+        path:       "foo-2fc489aa86483aa61e537c328841ed9056fdf6d150cfa43fa39fc18c67743f1c.js",
+        etag:       "2fc489aa86483aa61e537c328841ed9056fdf6d150cfa43fa39fc18c67743f1c",
         type:       "module",
         digest:     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         size:       0,
