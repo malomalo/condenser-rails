@@ -129,7 +129,7 @@ class Condenser::Railtie < ::Rails::Railtie
     else
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
-      env.register_exporter       'application/javascript', Condenser::RollupProcessor
+      env.register_exporter       'application/javascript', Condenser::RolldownProcessor
 
       if ::Rails.env != 'development'
         env.register_minifier       'application/javascript', resolve_minifier(config.assets.js_minifier) if config.assets.js_minifier

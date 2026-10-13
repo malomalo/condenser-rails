@@ -44,6 +44,11 @@ class BootTest < ActiveSupport::TestCase
     end
   end
 
+  def teardown
+    Condenser::RolldownProcessor.stop_workers if defined?(Condenser)
+    FileUtils.remove_entry(@rails_root, true) if @rails_root
+  end
+
   def test_initialize
     @app.initialize!
   end
@@ -381,6 +386,46 @@ class TestRailtie < BootTest
     assert_equal env.postprocessors, {"text/css"=>[Condenser::CSSMediaCombinerProcessor]}
     assert_equal env.minifiers, {"application/javascript"=>Condenser::TerserMinifier}
     assert_equal env.exporters, {}
+  end
+
+  def test_default_exporter_is_rolldown
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal({"application/javascript"=>[Condenser::RolldownProcessor]}, env.exporters)
+  end
+
+  def test_configuring_the_rolldown_exporter
+    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s, "import bar from 'bar'; console.log(bar);"
+    file @rails_root.join('app', 'assets', 'javascript', 'baz.js').to_s, "export default 'baz';"
+
+    app.configure do
+      config.assets.configure do |app, env|
+        env.unregister_exporter('application/javascript', Condenser::RolldownProcessor)
+        env.register_exporter('application/javascript', Condenser::RolldownProcessor.new(env.npm_path, aliases: {
+          'bar' => app.root.join('app/assets/javascript/baz.js').to_s
+        }))
+      end
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal 1, env.exporters['application/javascript'].size
+    assert_kind_of Condenser::RolldownProcessor, env.exporters['application/javascript'].first
+    assert_includes env['foo.js'].source, "baz"
+  end
+
+  def test_switching_to_the_deprecated_rollup_exporter
+    app.configure do
+      config.assets.configure do |app, env|
+        env.unregister_exporter('application/javascript')
+        env.register_exporter('application/javascript', Condenser::RollupProcessor)
+      end
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal({"application/javascript"=>[Condenser::RollupProcessor]}, env.exporters)
   end
 
 

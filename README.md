@@ -20,6 +20,35 @@ Add the `sass-embedded` gem to your application's Gemfile:
 gem 'sass-embedded'
 ```
 
+### JavaScript bundling
+
+JavaScript is bundled with [Rolldown](https://rolldown.rs) by default. Rolldown
+runs in Node, so Node must be installed wherever assets are compiled. The
+`rolldown` npm package is installed into the npm path (`config.assets.npm_path`, `Rails.root` by default)
+the first time it's needed.
+
+To configure Rolldown, replace the default exporter with a configured
+`Condenser::RolldownProcessor`:
+
+``` ruby
+config.assets.configure do |app, env|
+  env.unregister_exporter('application/javascript', Condenser::RolldownProcessor)
+  env.register_exporter('application/javascript', Condenser::RolldownProcessor.new(env.npm_path,
+    aliases: { 'jquery' => app.root.join('vendor/assets/javascripts/jquery.js').to_s }
+  ))
+end
+```
+
+Rollup is still available but deprecated, and will be removed in Condenser 3.
+To use it instead of Rolldown:
+
+``` ruby
+config.assets.configure do |app, env|
+  env.unregister_exporter('application/javascript')
+  env.register_exporter('application/javascript', Condenser::RollupProcessor)
+end
+```
+
 ## Usage
 
 ### Rake task
