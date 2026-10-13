@@ -94,13 +94,18 @@ the environment in a `config.assets.configure` block. See below.
 
 **`config.assets.js_minifier`**
 
-The JS minifier to use to minify javascript sources. Default is `:terser`, valid
-options are `:terser`, `:uglify`, and `false` to disable minification.
+The JS minifier to use to minify javascript sources. Not set by default, so
+javascript isn't minified. Valid options are `:terser`, `:uglify`, your own
+minifier, and `false` or `nil` to disable minification. `:terser` and `:uglify` run in Node
+and are npm-installed into the npm path when first used.
 
 **`config.assets.css_minifier`**
 
-The CSS minifier to use to minify css sources. Default is `:sass`, valid options
-are `:sass`, and `false` to disable minification.
+The CSS minifier to use to minify css sources. Not set by default, so css isn't
+minified. Valid options are `:sass` (which needs the `sass-embedded` gem), your own
+minifier, and `false` or `nil` to disable minification.
+
+Minifiers aren't used in the `development` environment.
 
 **`config.assets.compressors`**
 
@@ -119,8 +124,7 @@ access to the environment instance and lets you lazily load libraries only neede
 for asset compiling.
 
 ``` ruby
-config.assets.configure do |env|
-
+config.assets.configure do |app, env|
   require 'my_processor'
   env.register_preprocessor 'application/javascript', MyProcessor
 end
