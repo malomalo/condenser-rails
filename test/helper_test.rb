@@ -322,6 +322,14 @@ class RelativeHostHelperTest < HelperTest
     assert_equal "var url = '//assets.example.com/assets/foo-15eabcb8cd4d86fd393170a0976999ee8b8445352bd0e5cf57a357773e1baf2a.js';", @assets.find("application.js").to_s
     assert_equal "p { background: url(//assets.example.com/assets/logo-6105d6cc76af400325e94d588ce511be5bfdbb73b437dc51eca43917d7a43e3d.png); }", @assets.find("application.css").to_s
   end
+
+  def test_asset_url_depends_on_the_asset
+    file 'bank.scss', '$color: green; body { background: $color; }'
+    file 'application.css.erb', 'p { background: url(<%= stylesheet_path "bank" %>); }'
+
+    dependencies = @assets.find("application.css").process_dependencies
+    assert_equal [[File.join(@path, 'bank.scss'), ['text/css']]], dependencies.map { |d| [d.source_file, d.content_types] }
+  end
 end
 
 class ManifestHelperTest < NoHostHelperTest
