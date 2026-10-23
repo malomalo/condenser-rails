@@ -16,9 +16,9 @@ Gem::Specification.new do |s|
   s.required_ruby_version = '>= 3.3.0'
 
   s.add_dependency "condenser", ">= 1.5.1"
-  s.add_dependency "actionpack", ">= 7.1"
-  s.add_dependency "activesupport", ">= 7.1"
-  s.add_development_dependency "railties", ">= 7.1"
+  s.add_dependency "actionpack", ">= 8.0"
+  s.add_dependency "activesupport", ">= 8.0"
+  s.add_development_dependency "railties", ">= 8.0"
   s.add_development_dependency "rake"
   s.add_development_dependency "byebug"
   s.add_development_dependency "sass-embedded"
