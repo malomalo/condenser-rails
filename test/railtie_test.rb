@@ -438,6 +438,17 @@ class TestRailtie < BootTest
     assert_equal File.join(@rails_root, 'node_modules', 'rolldown'), env.exporters['application/javascript'].first.rolldown_path
   end
 
+  def test_configured_npm_path_is_kept
+    FileUtils.mkdir_p(File.join(@rails_root, 'frontend'))
+    app.configure do
+      config.assets.npm_path = Rails.root.join('frontend')
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal File.join(@rails_root, 'frontend'), env.npm_path
+  end
+
   def test_a_custom_pipeline_gets_the_npm_path
     npm_path = nil
     app.configure do

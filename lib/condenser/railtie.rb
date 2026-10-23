@@ -43,7 +43,8 @@ module Rails
       app.config.assets.path.unshift(*paths["vendor/assets"].existent_directories)
       app.config.assets.path.unshift(*paths["lib/assets"].existent_directories)
       app.config.assets.path.unshift(*paths["app/assets"].existent_directories)
-      app.config.assets.npm_path = app.root
+      # Runs after the app's config, so keep an npm_path the app set
+      app.config.assets.npm_path ||= app.root
     end
   end
 end
