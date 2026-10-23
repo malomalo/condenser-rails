@@ -171,7 +171,7 @@ javascript_include_tag :application, integrity: true
 ```
 
 The hash is added whenever `integrity: true` is passed, over HTTP as well as
-HTTPS..
+HTTPS.
 
 ## Upgrading to Condenser 2
 
