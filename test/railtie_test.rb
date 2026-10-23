@@ -46,11 +46,14 @@ class BootTest < ActiveSupport::TestCase
 
   def teardown
     Condenser::RolldownProcessor.stop_workers if defined?(Condenser)
+    # Leave @rails_root before deleting it, or getcwd fails after teardown
+    Dir.chdir(Dir.tmpdir)
     FileUtils.remove_entry(@rails_root, true) if @rails_root
   end
 
   def test_initialize
     @app.initialize!
+    assert @app.initialized?
   end
 end
 
