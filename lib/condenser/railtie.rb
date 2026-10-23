@@ -129,7 +129,9 @@ class Condenser::Railtie < ::Rails::Railtie
     end
   end
 
-  def build_environment(app, initialized = nil)
+  # listen - Whether condenser watches the asset paths for changes. Default
+  #          only in development and test.
+  def build_environment(app, initialized = nil, listen: ::Rails.env.local?)
     initialized = app.initialized? if initialized.nil?
     unless initialized
       ::Rails.logger.warn "Application uninitialized: Try calling YourApp::Application.initialize!"
@@ -139,7 +141,7 @@ class Condenser::Railtie < ::Rails::Railtie
 
     # Set the npm path up front so exporters and custom pipelines can use it
     npm_path = config.assets.npm_path if config.assets.npm_path && File.directory?(config.assets.npm_path)
-    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s, npm_path: npm_path)
+    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s, npm_path: npm_path, listen: listen)
 
     if config.assets._pipeline
       config.assets._pipeline.call(env)

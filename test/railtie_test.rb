@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'listen'
+require 'condenser/rails/task'
 
 # def silence_stderr
 #   orig_stderr = $stderr.clone
@@ -45,7 +47,7 @@ class BootTest < ActiveSupport::TestCase
   end
 
   def teardown
-    Condenser::RolldownProcessor.stop_workers if defined?(Condenser)
+    Condenser::NodeWorker.stop_workers if defined?(Condenser)
     # Leave @rails_root before deleting it, or getcwd fails after teardown
     Dir.chdir(Dir.tmpdir)
     FileUtils.remove_entry(@rails_root, true) if @rails_root
@@ -180,6 +182,30 @@ class TestRailtie < BootTest
     assert_equal false, env.exporters['application/javascript'].first.options[:minify]
     assert_nil env.minifier_for("application/javascript")
     assert_nil env.minifier_for("text/css")
+  end
+
+  def test_does_not_listen_for_changes_in_production
+    Rails.env = 'production'
+    app.initialize!
+
+    assert_equal false, app.assets.build_cache.listening
+  end
+
+  def test_listens_for_changes_in_development
+    Rails.env = 'development'
+    app.initialize!
+
+    skip 'needs a native Listen adapter' if Listen::Adapter.select == Listen::Adapter::Polling
+    assert_equal true, app.assets.build_cache.listening
+  end
+
+  def test_precompile_task_does_not_listen_for_changes
+    Rails.env = 'development'
+    app.initialize!
+    task = Condenser::Rails::Task.new(app)
+
+    assert_not_same app.assets, task.environment
+    assert_equal false, task.environment.build_cache.listening
   end
 
   def test_watches_config_by_default
