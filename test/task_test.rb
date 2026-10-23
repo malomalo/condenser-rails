@@ -8,10 +8,9 @@ class TaskTest < ActiveSupport::TestCase
   def setup
     @path = Dir.mktmpdir
     @manifest_file = File.join(@path, 'assets.json')
-    @assets = Condenser.new(@path)
     @npm_path = File.expand_path('../../tmp', __FILE__)
     Dir.mkdir(@npm_path) if !Dir.exist?(@npm_path)
-    @assets.npm_path = @npm_path
+    @assets = Condenser.new(@path, npm_path: @npm_path)
     @manifest = Condenser::Manifest.new(@assets, @manifest_file)
     
     @rake = Rake::Application.new
@@ -50,8 +49,8 @@ class TaskTest < ActiveSupport::TestCase
     assert_file "#{@path}/#{digest_path}"
     assert_file @manifest_file, {
       "foo.js" => {
-        path:       "foo-2fc489aa86483aa61e537c328841ed9056fdf6d150cfa43fa39fc18c67743f1c.js",
-        etag:       "2fc489aa86483aa61e537c328841ed9056fdf6d150cfa43fa39fc18c67743f1c",
+        path:       "foo-3e65ad17410c48ffa050e5214ae31b7e8efde8a114035537afa7cc1976de2c33.js",
+        etag:       "3e65ad17410c48ffa050e5214ae31b7e8efde8a114035537afa7cc1976de2c33",
         type:       "module",
         digest:     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         size:       0,
