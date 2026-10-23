@@ -94,16 +94,17 @@ the environment in a `config.assets.configure` block. See below.
 
 **`config.assets.js_minifier`**
 
-The JS minifier to use to minify javascript sources. Not set by default, so
-javascript isn't minified. Valid options are `:terser`, `:uglify`, your own
-minifier, and `false` or `nil` to disable minification. `:terser` and `:uglify` run in Node
-and are npm-installed into the npm path when first used.
+The JS minifier to use to minify javascript sources. Valid options are
+`:rolldown` (the default, Rolldown minifies its own output), `:terser`, your own
+minifier, and `false` or `nil` to disable minification. `:terser` runs in Node
+and is npm-installed into the npm path when first used.
 
 **`config.assets.css_minifier`**
 
-The CSS minifier to use to minify css sources. Not set by default, so css isn't
-minified. Valid options are `:sass` (which needs the `sass-embedded` gem), your own
-minifier, and `false` or `nil` to disable minification.
+The CSS minifier to use to minify css sources. Valid options are
+`:lightning_css` (the default, which needs the `lightningcss` gem), `:sass`
+(which needs the `sass-embedded` gem), your own minifier, and `false` or `nil`
+to disable minification.
 
 Minifiers aren't used in the `development` environment.
 

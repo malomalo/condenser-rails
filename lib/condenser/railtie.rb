@@ -72,6 +72,9 @@ class Condenser::Railtie < ::Rails::Railtie
   config.assets.digest      = true
   config.assets.cache_limit = 1_000.megabytes
   config.assets.compressors = [:zlib]
+  # Set to nil or false to disable minification
+  config.assets.js_minifier  = :rolldown
+  config.assets.css_minifier = :lightning_css
 
   config.assets.configure do |app, env|
     config.assets.path.each { |path| env.append_path(path) }
@@ -96,9 +99,14 @@ class Condenser::Railtie < ::Rails::Railtie
     Condenser::Rails::Task.new(app)
   end
   
+  # Minifier names that don't camelize to their class name
+  MINIFIERS = {
+    'lightning_css' => 'Condenser::LightningCSSMinifier'
+  }.freeze
+
   def resolve_minifier(value)
     if value.is_a?(Symbol) || value.is_a?(String)
-      "Condenser::#{value.to_s.camelize}Minifier".constantize
+      (MINIFIERS[value.to_s] || "Condenser::#{value.to_s.camelize}Minifier").constantize
     else
       value
     end
