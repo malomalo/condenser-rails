@@ -130,6 +130,17 @@ class NoHostHelperTest < HelperTest
       @view.javascript_include_tag("application", type: false)
   end
 
+  def test_javascript_include_tag_preload_links_header_for_detected_module
+    response = ActionDispatch::Response.new
+    # The view delegates response to its controller
+    @view.instance_variable_set(:@_controller, Struct.new(:response).new(response))
+
+    assert_equal %(<script src="/assets/application-682c45f920e706913e18337bf6d42631e4f0b040bf4a96e38fc75af61188cba0.js" type="module"></script>),
+      @view.javascript_include_tag("application", preload_links_header: true)
+    assert_equal "</assets/application-682c45f920e706913e18337bf6d42631e4f0b040bf4a96e38fc75af61188cba0.js>; rel=modulepreload; as=script; nopush",
+      response.headers["link"]
+  end
+
   def test_stylesheet_link_tag
     assert_dom_equal %(<link rel="stylesheet" href="/assets/application-fc0723da051bcb775c8ed480214382674f26b1c8535630996fc6da83d7f405fd.css" />),
       @view.stylesheet_link_tag("application")

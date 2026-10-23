@@ -97,7 +97,7 @@ module Condenser::Rails
         else
           options["type"]
         end
-        rel = options["type"] == "module" ? "modulepreload" : "preload"
+        rel = type == "module" ? "modulepreload" : "preload"
         
         if use_preload_links_header && !options["defer"] && href.present? && !href.start_with?("data:")
           preload_link = "<#{href}>; rel=#{rel}; as=script"
