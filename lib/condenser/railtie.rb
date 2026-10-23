@@ -110,12 +110,12 @@ class Condenser::Railtie < ::Rails::Railtie
   
   # Minifier names that don't camelize to their class name
   MINIFIERS = {
-    'lightning_css' => 'Condenser::LightningCSSMinifier'
+    lightning_css: 'Condenser::LightningCSSMinifier'
   }.freeze
 
   def resolve_minifier(value)
     if value.is_a?(Symbol) || value.is_a?(String)
-      (MINIFIERS[value.to_s] || "Condenser::#{value.to_s.camelize}Minifier").constantize
+      (MINIFIERS[value.to_sym] || "Condenser::#{value.to_s.camelize}Minifier").constantize
     else
       value
     end
