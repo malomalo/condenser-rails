@@ -81,8 +81,8 @@ class TestRailtie < BootTest
     # Condenser config
     assert            env.cache
     assert_nil        env.minifier_for("application/javascript")
-    assert_equal      Condenser::LightningCSSMinifier, env.minifier_for("text/css")
-    assert_equal      true, env.exporters['application/javascript'].first.options[:minify]
+    assert_nil        env.minifier_for("text/css")
+    assert_equal      false, env.exporters['application/javascript'].first.options[:minify]
   end
 
   def test_disabling_compile_has_manifest_but_no_env
@@ -122,6 +122,7 @@ class TestRailtie < BootTest
   end
 
   def test_minifiers
+    Rails.env = 'production'
     app.configure do
       config.assets.js_minifier  = :terser
       config.assets.css_minifier = :sass
@@ -134,7 +135,8 @@ class TestRailtie < BootTest
     assert_equal false, env.exporters['application/javascript'].first.options[:minify]
   end
 
-  def test_rolldown_minifies_by_default_outside_development
+  def test_rolldown_minifies_by_default_in_production
+    Rails.env = 'production'
     app.initialize!
 
     assert env = app.assets
@@ -144,6 +146,7 @@ class TestRailtie < BootTest
   end
 
   def test_disabling_the_minifiers
+    Rails.env = 'production'
     app.configure do
       config.assets.js_minifier  = nil
       config.assets.css_minifier = nil
@@ -158,6 +161,16 @@ class TestRailtie < BootTest
 
   def test_minifiers_do_not_run_in_development
     Rails.env = 'development'
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal false, env.exporters['application/javascript'].first.options[:minify]
+    assert_nil env.minifier_for("application/javascript")
+    assert_nil env.minifier_for("text/css")
+  end
+
+  def test_minifiers_do_not_run_in_test
+    Rails.env = 'test'
     app.initialize!
 
     assert env = app.assets
@@ -209,6 +222,7 @@ class TestRailtie < BootTest
   end
 
   def test_custom_compressors
+    Rails.env = 'production'
     compressor = Class.new
     app.configure do
       config.assets.js_minifier  = compressor

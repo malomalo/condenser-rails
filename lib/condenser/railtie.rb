@@ -73,7 +73,7 @@ class Condenser::Railtie < ::Rails::Railtie
   config.assets.digest      = true
   config.assets.cache_limit = 1_000.megabytes
   config.assets.compressors = [:zlib]
-  # Set to nil or false to disable minification
+  # Used outside development and test; set to nil or false to disable
   config.assets.js_minifier  = :rolldown
   config.assets.css_minifier = :lightning_css
   # Directories, relative to Rails.root or absolute, whose files can be
@@ -144,7 +144,8 @@ class Condenser::Railtie < ::Rails::Railtie
     if config.assets._pipeline
       config.assets._pipeline.call(env)
     else
-      minify = ::Rails.env != 'development'
+      # Only minify outside development and test
+      minify = !::Rails.env.local?
       js_minifier = config.assets.js_minifier
       # Rolldown minifies its own output unless another JS minifier is chosen
       rolldown_minifies = minify && js_minifier.to_s == 'rolldown'
