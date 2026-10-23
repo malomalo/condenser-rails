@@ -392,7 +392,28 @@ class TestRailtie < BootTest
     app.initialize!
 
     assert env = app.assets
-    assert_equal({"application/javascript"=>[Condenser::RolldownProcessor]}, env.exporters)
+    assert_equal ["application/javascript"], env.exporters.keys
+    assert_equal [Condenser::RolldownProcessor], env.exporters["application/javascript"].map(&:class)
+  end
+
+  def test_rolldown_gets_the_npm_path
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal @rails_root.to_s, env.npm_path
+    assert_equal File.join(@rails_root, 'node_modules', 'rolldown'), env.exporters['application/javascript'].first.rolldown_path
+  end
+
+  def test_a_custom_pipeline_gets_the_npm_path
+    npm_path = nil
+    app.configure do
+      config.assets.pipeline do |condenser|
+        npm_path = condenser.npm_path
+      end
+    end
+    app.initialize!
+
+    assert_equal @rails_root.to_s, npm_path
   end
 
   def test_configuring_the_rolldown_exporter

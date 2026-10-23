@@ -75,9 +75,6 @@ class Condenser::Railtie < ::Rails::Railtie
 
   config.assets.configure do |app, env|
     config.assets.path.each { |path| env.append_path(path) }
-    if config.assets.npm_path && File.directory?(config.assets.npm_path)
-      env.append_npm_path(config.assets.npm_path)
-    end
   end
 
   config.assets.configure do |app, env|
@@ -121,18 +118,26 @@ class Condenser::Railtie < ::Rails::Railtie
       ::Rails.logger.warn "Application uninitialized: Try calling YourApp::Application.initialize!"
     end
 
-    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s)
     config = app.config
+
+    # Set the npm path up front so exporters and custom pipelines can use it
+    npm_path = config.assets.npm_path if config.assets.npm_path && File.directory?(config.assets.npm_path)
+    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s, npm_path: npm_path)
 
     if config.assets._pipeline
       config.assets._pipeline.call(env)
     else
+      minify = ::Rails.env != 'development'
+      js_minifier = config.assets.js_minifier
+      # Rolldown minifies its own output unless another JS minifier is chosen
+      rolldown_minifies = minify && js_minifier.to_s == 'rolldown'
+
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
-      env.register_exporter       'application/javascript', Condenser::RolldownProcessor
+      env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path, minify: rolldown_minifies)
 
-      if ::Rails.env != 'development'
-        env.register_minifier       'application/javascript', resolve_minifier(config.assets.js_minifier) if config.assets.js_minifier
+      if minify
+        env.register_minifier       'application/javascript', resolve_minifier(js_minifier) if js_minifier && !rolldown_minifies
         env.register_minifier       'text/css', resolve_minifier(config.assets.css_minifier) if config.assets.css_minifier
       end
 
