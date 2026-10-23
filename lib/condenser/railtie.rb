@@ -76,9 +76,17 @@ class Condenser::Railtie < ::Rails::Railtie
   # Set to nil or false to disable minification
   config.assets.js_minifier  = :rolldown
   config.assets.css_minifier = :lightning_css
+  # Directories, relative to Rails.root or absolute, whose files can be
+  # `depends_on`'d and rebuild assets when they change
+  config.assets.watch        = ['config']
 
   config.assets.configure do |app, env|
     config.assets.path.each { |path| env.append_path(path) }
+    # A no-op unless condenser is listening for changes
+    Array(config.assets.watch).each do |path|
+      path = File.expand_path(path, app.root)
+      env.watch(path) if File.directory?(path)
+    end
   end
 
   config.assets.configure do |app, env|

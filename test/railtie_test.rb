@@ -166,6 +166,48 @@ class TestRailtie < BootTest
     assert_nil env.minifier_for("text/css")
   end
 
+  def test_watches_config_by_default
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [File.join(@rails_root, 'config')], env.watched_paths.map(&:first)
+  end
+
+  def test_skips_missing_watch_directories
+    app.configure do
+      config.assets.watch << 'missing'
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [File.join(@rails_root, 'config')], env.watched_paths.map(&:first)
+  end
+
+  def test_adding_watch_directories
+    FileUtils.mkdir_p(File.join(@rails_root, 'data'))
+    other = Pathname.new(Dir.mktmpdir).realpath.to_s
+    app.configure do
+      config.assets.watch << 'data' << other
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [File.join(@rails_root, 'config'), File.join(@rails_root, 'data'), other], env.watched_paths.map(&:first)
+  ensure
+    FileUtils.remove_entry(other, true) if other
+  end
+
+  def test_replacing_watch_directories
+    FileUtils.mkdir_p(File.join(@rails_root, 'data'))
+    app.configure do
+      config.assets.watch = ['data']
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [File.join(@rails_root, 'data')], env.watched_paths.map(&:first)
+  end
+
   def test_custom_compressors
     compressor = Class.new
     app.configure do
