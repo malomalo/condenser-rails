@@ -13,25 +13,22 @@ jobs:
       fail-fast: false
       matrix:
         ruby-version:
-          - 3.2
-          - 3.3
-          - 3.4
-          - 3.5.0-preview1
+          - '3.3'
+          - '3.4'
+          - '4.0'
         rails-version:
-          - 7.1
-          - 7.2
-          - 8.0
-        exclude:
-          - rails-version: '7.1'
-            ruby-version: '3.5.0-preview1'
-          - rails-version: '7.2'
-            ruby-version: '3.5.0-preview1'
+          - '8.0'
+          - '8.1'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
 
       - run: |
-          echo 'gem "rails", "${{ matrix.rails-version }}"' >> Gemfile
+          echo 'gem "rails", "~> ${{ matrix.rails-version }}.0"' >> Gemfile
 
       - uses: ruby/setup-ruby@v1
         with:

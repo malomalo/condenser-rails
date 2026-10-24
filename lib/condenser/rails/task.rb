@@ -17,9 +17,8 @@ module Condenser::Rails
 
     def environment
       if app
-        # Use initialized app.assets or force build an environment if
-        # config.assets.compile is disabled
-        app.assets || Condenser::Railtie.build_environment(app)
+        # Its own environment, so compiling never starts a file listener
+        @app_environment ||= Condenser::Railtie.build_environment(app, listen: false)
       else
         super
       end

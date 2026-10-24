@@ -13,14 +13,15 @@ Gem::Specification.new do |s|
 
   s.files = Dir["README.md", "lib/**/*.rb", "LICENSE"]
 
-  s.required_ruby_version = '>= 3.2.0'
+  s.required_ruby_version = '>= 3.3.0'
 
   s.add_dependency "condenser", ">= 1.5.1"
-  s.add_dependency "actionpack", ">= 6.0"
-  s.add_dependency "activesupport", ">= 6.0"
-  s.add_development_dependency "railties", ">= 6.0"
+  s.add_dependency "actionpack", ">= 8.0"
+  s.add_dependency "activesupport", ">= 8.0"
+  s.add_development_dependency "railties", ">= 8.0"
   s.add_development_dependency "rake"
   s.add_development_dependency "byebug"
-  s.add_development_dependency "sassc"
+  s.add_development_dependency "sass-embedded"
+  s.add_development_dependency "lightningcss", ">= 1.33.0.2"
   s.add_development_dependency "minitest-reporters"
 end

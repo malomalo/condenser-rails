@@ -43,7 +43,8 @@ module Rails
       app.config.assets.path.unshift(*paths["vendor/assets"].existent_directories)
       app.config.assets.path.unshift(*paths["lib/assets"].existent_directories)
       app.config.assets.path.unshift(*paths["app/assets"].existent_directories)
-      app.config.assets.npm_path = app.root
+      # Runs after the app's config, so keep an npm_path the app set
+      app.config.assets.npm_path ||= app.root
     end
   end
 end
@@ -72,11 +73,19 @@ class Condenser::Railtie < ::Rails::Railtie
   config.assets.digest      = true
   config.assets.cache_limit = 1_000.megabytes
   config.assets.compressors = [:zlib]
+  # Used outside development and test; set to nil or false to disable
+  config.assets.js_minifier  = :rolldown
+  config.assets.css_minifier = :lightning_css
+  # Directories, relative to Rails.root or absolute, whose files can be
+  # `depends_on`'d and rebuild assets when they change
+  config.assets.watch        = ['config']
 
   config.assets.configure do |app, env|
     config.assets.path.each { |path| env.append_path(path) }
-    if config.assets.npm_path && File.directory?(config.assets.npm_path)
-      env.append_npm_path(config.assets.npm_path)
+    # A no-op unless condenser is listening for changes
+    Array(config.assets.watch).each do |path|
+      path = File.expand_path(path, app.root)
+      env.watch(path) if File.directory?(path)
     end
   end
 
@@ -99,9 +108,14 @@ class Condenser::Railtie < ::Rails::Railtie
     Condenser::Rails::Task.new(app)
   end
   
+  # Minifier names that don't camelize to their class name
+  MINIFIERS = {
+    lightning_css: 'Condenser::LightningCSSMinifier'
+  }.freeze
+
   def resolve_minifier(value)
     if value.is_a?(Symbol) || value.is_a?(String)
-      "Condenser::#{value.to_s.camelize}Minifier".constantize
+      (MINIFIERS[value.to_sym] || "Condenser::#{value.to_s.camelize}Minifier").constantize
     else
       value
     end
@@ -115,24 +129,35 @@ class Condenser::Railtie < ::Rails::Railtie
     end
   end
 
-  def build_environment(app, initialized = nil)
+  # listen - Whether condenser watches the asset paths for changes. Default
+  #          only in development and test.
+  def build_environment(app, initialized = nil, listen: ::Rails.env.local?)
     initialized = app.initialized? if initialized.nil?
     unless initialized
       ::Rails.logger.warn "Application uninitialized: Try calling YourApp::Application.initialize!"
     end
 
-    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s)
     config = app.config
+
+    # Set the npm path up front so exporters and custom pipelines can use it
+    npm_path = config.assets.npm_path if config.assets.npm_path && File.directory?(config.assets.npm_path)
+    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s, npm_path: npm_path, listen: listen)
 
     if config.assets._pipeline
       config.assets._pipeline.call(env)
     else
+      # Only minify outside development and test
+      minify = !::Rails.env.local?
+      js_minifier = config.assets.js_minifier
+      # Rolldown minifies its own output unless another JS minifier is chosen
+      rolldown_minifies = minify && js_minifier.to_s == 'rolldown'
+
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
-      env.register_exporter       'application/javascript', Condenser::RollupProcessor
+      env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path, minify: rolldown_minifies)
 
-      if ::Rails.env != 'development'
-        env.register_minifier       'application/javascript', resolve_minifier(config.assets.js_minifier) if config.assets.js_minifier
+      if minify
+        env.register_minifier       'application/javascript', resolve_minifier(js_minifier) if js_minifier && !rolldown_minifies
         env.register_minifier       'text/css', resolve_minifier(config.assets.css_minifier) if config.assets.css_minifier
       end
 

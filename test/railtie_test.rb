@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'test_helper'
+require 'listen'
+require 'condenser/rails/task'
 
 # def silence_stderr
 #   orig_stderr = $stderr.clone
@@ -44,8 +46,16 @@ class BootTest < ActiveSupport::TestCase
     end
   end
 
+  def teardown
+    Condenser::NodeWorker.stop_workers if defined?(Condenser)
+    # Leave @rails_root before deleting it, or getcwd fails after teardown
+    Dir.chdir(Dir.tmpdir)
+    FileUtils.remove_entry(@rails_root, true) if @rails_root
+  end
+
   def test_initialize
     @app.initialize!
+    assert @app.initialized?
   end
 end
 
@@ -77,6 +87,7 @@ class TestRailtie < BootTest
     assert            env.cache
     assert_nil        env.minifier_for("application/javascript")
     assert_nil        env.minifier_for("text/css")
+    assert_equal      false, env.exporters['application/javascript'].first.options[:minify]
   end
 
   def test_disabling_compile_has_manifest_but_no_env
@@ -116,18 +127,131 @@ class TestRailtie < BootTest
   end
 
   def test_minifiers
+    Rails.env = 'production'
     app.configure do
-      config.assets.js_minifier  = :uglify
+      config.assets.js_minifier  = :terser
       config.assets.css_minifier = :sass
     end
     app.initialize!
 
     assert env = app.assets
-    assert_equal Condenser::UglifyMinifier, env.minifier_for("application/javascript")
+    assert_equal Condenser::TerserMinifier, env.minifier_for("application/javascript")
     assert_equal Condenser::SassMinifier, env.minifier_for("text/css")
+    assert_equal false, env.exporters['application/javascript'].first.options[:minify]
+  end
+
+  def test_rolldown_minifies_by_default_in_production
+    Rails.env = 'production'
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal true, env.exporters['application/javascript'].first.options[:minify]
+    assert_nil env.minifier_for("application/javascript")
+    assert_equal Condenser::LightningCSSMinifier, env.minifier_for("text/css")
+  end
+
+  def test_disabling_the_minifiers
+    Rails.env = 'production'
+    app.configure do
+      config.assets.js_minifier  = nil
+      config.assets.css_minifier = nil
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal false, env.exporters['application/javascript'].first.options[:minify]
+    assert_nil env.minifier_for("application/javascript")
+    assert_nil env.minifier_for("text/css")
+  end
+
+  def test_minifiers_do_not_run_in_development
+    Rails.env = 'development'
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal false, env.exporters['application/javascript'].first.options[:minify]
+    assert_nil env.minifier_for("application/javascript")
+    assert_nil env.minifier_for("text/css")
+  end
+
+  def test_minifiers_do_not_run_in_test
+    Rails.env = 'test'
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal false, env.exporters['application/javascript'].first.options[:minify]
+    assert_nil env.minifier_for("application/javascript")
+    assert_nil env.minifier_for("text/css")
+  end
+
+  def test_does_not_listen_for_changes_in_production
+    Rails.env = 'production'
+    app.initialize!
+
+    assert_equal false, app.assets.build_cache.listening
+  end
+
+  def test_listens_for_changes_in_development
+    Rails.env = 'development'
+    app.initialize!
+
+    skip 'needs a native Listen adapter' if Listen::Adapter.select == Listen::Adapter::Polling
+    assert_equal true, app.assets.build_cache.listening
+  end
+
+  def test_precompile_task_does_not_listen_for_changes
+    Rails.env = 'development'
+    app.initialize!
+    task = Condenser::Rails::Task.new(app)
+
+    assert_not_same app.assets, task.environment
+    assert_equal false, task.environment.build_cache.listening
+  end
+
+  def test_watches_config_by_default
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [File.join(@rails_root, 'config')], env.watched_paths.map(&:first)
+  end
+
+  def test_skips_missing_watch_directories
+    app.configure do
+      config.assets.watch << 'missing'
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [File.join(@rails_root, 'config')], env.watched_paths.map(&:first)
+  end
+
+  def test_adding_watch_directories
+    FileUtils.mkdir_p(File.join(@rails_root, 'data'))
+    other = Pathname.new(Dir.mktmpdir).realpath.to_s
+    app.configure do
+      config.assets.watch << 'data' << other
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [File.join(@rails_root, 'config'), File.join(@rails_root, 'data'), other], env.watched_paths.map(&:first)
+  ensure
+    FileUtils.remove_entry(other, true) if other
+  end
+
+  def test_replacing_watch_directories
+    FileUtils.mkdir_p(File.join(@rails_root, 'data'))
+    app.configure do
+      config.assets.watch = ['data']
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [File.join(@rails_root, 'data')], env.watched_paths.map(&:first)
   end
 
   def test_custom_compressors
+    Rails.env = 'production'
     compressor = Class.new
     app.configure do
       config.assets.js_minifier  = compressor
@@ -203,7 +327,7 @@ class TestRailtie < BootTest
     assert_equal app.assets_manifest, ActionView::Base.assets_manifest
 
     @view = action_view
-    assert_equal "/assets/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js", @view.javascript_path("foo")
+    assert_match %r{\A/assets/foo-\h{64}\.js\z}, @view.javascript_path("foo")
 
     env = @view.assets
     assert_kind_of Condenser, env
@@ -276,22 +400,23 @@ class TestRailtie < BootTest
     app.initialize!
     app.load_tasks
 
-    path = "#{app.assets_manifest.dir}/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js"
+    path = "#{app.assets_manifest.dir}/foo-*.js"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
     # end
-    refute File.exist?(path)
+    assert_empty Dir.glob(path)
 
     # silence_stderr do
       Rake.application['assets:precompile'].execute
     # end
-    assert File.exist?(path)
+    assert_equal 1, Dir.glob(path).size
+    assert_includes File.read(Dir.glob(path).first), "console.log"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
     # end
-    refute File.exist?(path)
+    assert_empty Dir.glob(path)
   end
 
   def test_task_precompile_compile_false
@@ -304,22 +429,23 @@ class TestRailtie < BootTest
     app.initialize!
     app.load_tasks
 
-    path = "#{app.assets_manifest.dir}/foo-5dfdd4e084f3e3f5928568592a559c0d3afe5ceaa23dbe37069ef1571ce7e714.js"
+    path = "#{app.assets_manifest.dir}/foo-*.js"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
     # end
-    refute File.exist?(path)
+    assert_empty Dir.glob(path)
 
     # silence_stderr do
       Rake.application['assets:precompile'].execute
     # end
-    assert File.exist?(path)
+    assert_equal 1, Dir.glob(path).size
+    assert_includes File.read(Dir.glob(path).first), "console.log"
 
     # silence_stderr do
       Rake.application['assets:clobber'].execute
     # end
-    refute File.exist?(path)
+    assert_empty Dir.glob(path)
   end
 
   def test_direct_build_environment_call
@@ -379,6 +505,78 @@ class TestRailtie < BootTest
     assert_equal env.postprocessors, {"text/css"=>[Condenser::CSSMediaCombinerProcessor]}
     assert_equal env.minifiers, {"application/javascript"=>Condenser::TerserMinifier}
     assert_equal env.exporters, {}
+  end
+
+  def test_default_exporter_is_rolldown
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal ["application/javascript"], env.exporters.keys
+    assert_equal [Condenser::RolldownProcessor], env.exporters["application/javascript"].map(&:class)
+  end
+
+  def test_rolldown_gets_the_npm_path
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal @rails_root.to_s, env.npm_path
+    assert_equal File.join(@rails_root, 'node_modules', 'rolldown'), env.exporters['application/javascript'].first.rolldown_path
+  end
+
+  def test_configured_npm_path_is_kept
+    FileUtils.mkdir_p(File.join(@rails_root, 'frontend'))
+    app.configure do
+      config.assets.npm_path = Rails.root.join('frontend')
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal File.join(@rails_root, 'frontend'), env.npm_path
+  end
+
+  def test_a_custom_pipeline_gets_the_npm_path
+    npm_path = nil
+    app.configure do
+      config.assets.pipeline do |condenser|
+        npm_path = condenser.npm_path
+      end
+    end
+    app.initialize!
+
+    assert_equal @rails_root.to_s, npm_path
+  end
+
+  def test_configuring_the_rolldown_exporter
+    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s, "import bar from 'bar'; console.log(bar);"
+    file @rails_root.join('app', 'assets', 'javascript', 'baz.js').to_s, "export default 'baz';"
+
+    app.configure do
+      config.assets.configure do |app, env|
+        env.unregister_exporter('application/javascript', Condenser::RolldownProcessor)
+        env.register_exporter('application/javascript', Condenser::RolldownProcessor.new(env.npm_path, aliases: {
+          'bar' => app.root.join('app/assets/javascript/baz.js').to_s
+        }))
+      end
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal 1, env.exporters['application/javascript'].size
+    assert_kind_of Condenser::RolldownProcessor, env.exporters['application/javascript'].first
+    assert_includes env['foo.js'].source, "baz"
+  end
+
+  def test_switching_to_the_deprecated_rollup_exporter
+    app.configure do
+      config.assets.configure do |app, env|
+        env.unregister_exporter('application/javascript')
+        env.register_exporter('application/javascript', Condenser::RollupProcessor)
+      end
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal({"application/javascript"=>[Condenser::RollupProcessor]}, env.exporters)
   end
 
 
