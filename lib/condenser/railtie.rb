@@ -76,6 +76,10 @@ class Condenser::Railtie < ::Rails::Railtie
   # Used outside development and test; set to nil or false to disable
   config.assets.js_minifier  = :rolldown
   config.assets.css_minifier = :lightning_css
+  # Rolldown module types by extension, e.g. { png: :dataurl, ttf: :base64 }
+  config.assets.module_types = {}
+  # Rolldown source maps: false, :linked or :hidden, in every environment
+  config.assets.sourcemap    = false
   # Directories, relative to Rails.root or absolute, whose files can be
   # `depends_on`'d and rebuild assets when they change
   config.assets.watch        = ['config']
@@ -154,7 +158,11 @@ class Condenser::Railtie < ::Rails::Railtie
 
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
-      env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path, minify: rolldown_minifies)
+      env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path,
+        minify: rolldown_minifies,
+        module_types: config.assets.module_types || {},
+        sourcemap: config.assets.sourcemap || false
+      )
 
       if minify
         env.register_minifier       'application/javascript', resolve_minifier(js_minifier) if js_minifier && !rolldown_minifies

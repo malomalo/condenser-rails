@@ -136,6 +136,47 @@ to disable minification.
 
 Assets are only minified outside the `development` and `test` environments.
 
+**`config.assets.module_types`**
+
+How Rolldown loads JavaScript imports, by file extension (without the dot).
+Values are Rolldown module types: `:base64`, `:binary`, `:dataurl`, `:empty`,
+`:js`, `:json`, `:jsx`, `:text`, `:ts` and `:tsx`. Defaults to `{}`.
+
+``` ruby
+config.assets.module_types = { png: :dataurl, ttf: :base64 }
+```
+
+``` js
+import logo from 'logo.png'; // a data: URL
+```
+
+**`config.assets.sourcemap`**
+
+Whether Rolldown writes a source map for each JavaScript bundle: `false` (the
+default), `:linked` or `:hidden`. It applies in every environment, so set it per
+environment in `config/environments/*.rb`. Development builds aren't minified,
+so maps there are optional.
+
+- `:linked` appends `//# sourceMappingURL=…` to the bundle, so browser devtools
+  and error trackers such as Sentry fetch the map from your server.
+- `:hidden` writes the map without the comment, so browsers don't find it;
+  upload it to Sentry yourself (e.g. with `sentry-cli sourcemaps upload`).
+
+``` ruby
+# config/environments/production.rb
+config.assets.sourcemap = :hidden
+```
+
+`rake assets:precompile` writes the map next to the bundle, as
+`application-<etag>.js.map`, and adds it to the manifest's `map` field;
+`assets:clean` keeps it and `assets:clobber` removes it. The development server
+serves it at the bundle's URL plus `.map`. A `:terser` `js_minifier` changes
+the bundle after Rolldown, so no map is written; use the default `:rolldown`.
+
+Both settings only apply to the default pipeline; a custom
+`config.assets.pipeline` or Rolldown exporter passes `module_types:` and
+`sourcemap:` to `Condenser::RolldownProcessor.new` itself.
+
 **`config.assets.compressors`**
 
 A list of compressors to compress the output with. Each file will be written along

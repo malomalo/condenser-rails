@@ -579,6 +579,112 @@ class TestRailtie < BootTest
     assert_equal({"application/javascript"=>[Condenser::RollupProcessor]}, env.exporters)
   end
 
+  def test_rolldown_options_are_unchanged_by_default
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal({}, app.config.assets.module_types)
+    assert_equal false, app.config.assets.sourcemap
+    assert_equal Condenser::RolldownProcessor.new(env.npm_path, minify: false).options,
+      env.exporters['application/javascript'].first.options
+  end
+
+  def test_module_types
+    app.configure do
+      config.assets.module_types = { png: :dataurl, ttf: :base64 }
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal({ "png" => "dataurl", "ttf" => "base64" }, env.exporters['application/javascript'].first.options[:module_types])
+  end
+
+  def test_invalid_module_types
+    app.configure do
+      config.assets.module_types = { '.png' => :dataurl }
+    end
+
+    assert_raises(ArgumentError) { app.initialize! }
+  end
+
+  def test_sourcemap
+    %i[linked hidden].each do |sourcemap|
+      app.config.assets.sourcemap = sourcemap
+      assert env = Condenser::Railtie.build_environment(app, true)
+      assert_equal sourcemap, env.exporters['application/javascript'].first.options[:sourcemap]
+    end
+  end
+
+  def test_sourcemap_with_rolldown_minifying_in_production
+    Rails.env = 'production'
+    app.configure do
+      config.assets.sourcemap = :hidden
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal true, env.exporters['application/javascript'].first.options[:minify]
+    assert_equal :hidden, env.exporters['application/javascript'].first.options[:sourcemap]
+  end
+
+  def test_invalid_sourcemap
+    app.configure do
+      config.assets.sourcemap = :inline
+    end
+
+    assert_raises(ArgumentError) { app.initialize! }
+  end
+
+  def test_server_serves_the_sourcemap
+    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s, "var Foo = 1; console.log(Foo);"
+
+    app.configure do
+      config.assets.sourcemap = :linked
+    end
+    app.initialize!
+
+    path = "/assets/#{app.assets['foo.js'].path}"
+    request = Rack::MockRequest.new(app)
+
+    response = request.get(path)
+    assert_equal 200, response.status
+    assert_equal "#{path}.map", response.headers['sourcemap']
+
+    response = request.get("#{path}.map")
+    assert_equal 200, response.status
+    assert_includes JSON.parse(response.body)['sourcesContent'].join, "console.log(Foo)"
+  end
+
+  def test_task_precompile_with_a_sourcemap
+    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s, "var Foo = 1; console.log(Foo);"
+
+    app.configure do
+      config.assets.sourcemap = :linked
+      config.assets.precompile = ["foo.js"]
+    end
+    app.initialize!
+    app.load_tasks
+
+    dir = app.assets_manifest.dir
+    Rake.application['assets:clobber'].execute
+    Rake.application['assets:precompile'].execute
+
+    js = Dir.glob("#{dir}/foo-*.js")
+    assert_equal 1, js.size
+    assert_equal ["#{js.first}.map"], Dir.glob("#{dir}/foo-*.js.map")
+    assert_match %r{\n//# sourceMappingURL=#{Regexp.escape(File.basename(js.first))}\.map\n\z}, File.read(js.first)
+    assert_includes JSON.parse(File.read("#{js.first}.map"))['sourcesContent'].join, "console.log(Foo)"
+
+    manifest = JSON.parse(File.read(app.assets_manifest.filename))
+    assert_equal "#{File.basename(js.first)}.map", manifest['foo.js']['map']
+
+    Rake.application['assets:clean'].execute
+    assert File.exist?("#{js.first}.map")
+
+    Rake.application['assets:clobber'].execute
+    assert_empty Dir.children(dir)
+  end
+
 
   # def test_quiet_assets_defaults_to_off
   #   app.initialize!
