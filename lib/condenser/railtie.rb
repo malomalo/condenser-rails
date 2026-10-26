@@ -79,6 +79,10 @@ class Condenser::Railtie < ::Rails::Railtie
   # Directories, relative to Rails.root or absolute, whose files can be
   # `depends_on`'d and rebuild assets when they change
   config.assets.watch        = ['config']
+  # Compile stylesheets that `@import "tailwindcss"` with Tailwind, scanning
+  # app/ and the tailwind_sources, relative to Rails.root or absolute
+  config.assets.tailwind         = false
+  config.assets.tailwind_sources = []
 
   config.assets.configure do |app, env|
     config.assets.path.each { |path| env.append_path(path) }
@@ -154,6 +158,12 @@ class Condenser::Railtie < ::Rails::Railtie
 
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
+      if config.assets.tailwind
+        # The CSS minifier minifies Tailwind's output with the rest of the
+        # stylesheet, so Tailwind doesn't. The processor watches the sources.
+        sources = ['app', *config.assets.tailwind_sources].map { |path| File.expand_path(path, app.root) }
+        env.register_preprocessor 'text/css', Condenser::TailwindProcessor.new(env.npm_path, sources: sources, minify: false)
+      end
       env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path, minify: rolldown_minifies)
 
       if minify

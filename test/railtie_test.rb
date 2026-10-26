@@ -606,3 +606,132 @@ class TestRailtie < BootTest
       ActionView::Base.new(ActionView::LookupContext.new([]), {}, nil)
     end
 end
+
+class TestTailwind < BootTest
+
+  # Tailwind's packages are installed once, here, instead of in each app
+  NPM_PATH = File.expand_path('../tmp/npm', __dir__)
+
+  def setup
+    super
+    require 'condenser/railtie'
+    FileUtils.mkdir_p(NPM_PATH)
+    # Without one npm installs into the nearest parent with a package.json
+    File.write(File.join(NPM_PATH, 'package.json'), '{}') if !File.exist?(File.join(NPM_PATH, 'package.json'))
+    app.config.assets.npm_path = NPM_PATH
+    FileUtils.mkdir_p(@rails_root.join('app/views'))
+    file @rails_root.join('app/assets/stylesheets/application.css').to_s, '@import "tailwindcss";'
+  end
+
+  def tailwind(env)
+    env.instance_variable_get(:@preprocessors)['text/css']&.find { |p| p.is_a?(Condenser::TailwindProcessor) }
+  end
+
+  def css
+    app.assets.find('application.css').source
+  end
+
+  def wait_until(timeout: 10)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+    until (result = yield)
+      return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      sleep 0.1
+    end
+    result
+  end
+
+  def test_disabled_by_default
+    app.initialize!
+
+    assert_equal false, app.config.assets.tailwind
+    assert_nil tailwind(app.assets)
+    assert_equal '@import "tailwindcss";', css
+  end
+
+  def test_registers_the_processor_with_app_and_the_tailwind_sources
+    FileUtils.mkdir_p(@rails_root.join('lib/components'))
+    other = Pathname.new(Dir.mktmpdir).realpath.to_s
+    app.configure do
+      config.assets.tailwind = true
+      config.assets.tailwind_sources = ['lib/components', other]
+    end
+    app.initialize!
+
+    assert processor = tailwind(app.assets)
+    assert_equal [@rails_root.join('app').to_s, @rails_root.join('lib/components').to_s, other], processor.options[:sources]
+    assert_equal false, processor.options[:minify]
+    %w[tailwindcss @tailwindcss/node @tailwindcss/oxide].each do |package|
+      assert File.exist?(File.join(NPM_PATH, 'node_modules', package, 'package.json')), "#{package} isn't installed"
+    end
+  ensure
+    FileUtils.remove_entry(other, true) if other
+  end
+
+  def test_not_registered_with_a_custom_pipeline
+    app.configure do
+      config.assets.tailwind = true
+      config.assets.pipeline { |env| }
+    end
+    app.initialize!
+
+    assert_nil tailwind(app.assets)
+  end
+
+  def test_compiles_the_classes_in_app
+    file @rails_root.join('app/views/home/index.html.erb').to_s, '<div class="flex p-4"></div>'
+    file @rails_root.join('lib/card.html').to_s, '<div class="grid"></div>'
+    app.configure do
+      config.assets.tailwind = true
+    end
+    app.initialize!
+
+    source = css
+    assert_includes source, ".flex {\n    display: flex;\n  }"
+    assert_includes source, '.p-4 {'
+    assert_not_includes source, '.grid {'
+  end
+
+  def test_tailwind_sources_adds_a_lib_directory
+    file @rails_root.join('app/views/home/index.html.erb').to_s, '<div class="flex"></div>'
+    file @rails_root.join('lib/components/card.html').to_s, '<div class="grid"></div>'
+    file @rails_root.join('lib/other.html').to_s, '<div class="hidden"></div>'
+    app.configure do
+      config.assets.tailwind = true
+      config.assets.tailwind_sources = ['lib/components']
+    end
+    app.initialize!
+
+    source = css
+    assert_includes source, '.flex {'
+    assert_includes source, '.grid {'
+    assert_not_includes source, '.hidden {'
+  end
+
+  def test_minified_by_the_css_minifier_in_production
+    file @rails_root.join('app/views/home/index.html.erb').to_s, '<div class="flex"></div>'
+    Rails.env = 'production'
+    app.configure do
+      config.assets.tailwind = true
+    end
+    app.initialize!
+
+    assert_equal false, tailwind(app.assets).options[:minify]
+    assert_equal Condenser::LightningCSSMinifier, app.assets.minifier_for('text/css')
+    assert_includes app.assets.find('application.css').export.source, '.flex{display:flex}'
+  end
+
+  def test_a_view_edit_rebuilds_the_css_in_development
+    file @rails_root.join('app/views/home/index.html.erb').to_s, '<div class="flex"></div>'
+    Rails.env = 'development'
+    app.configure do
+      config.assets.tailwind = true
+    end
+    app.initialize!
+    skip 'needs a native Listen adapter' if Listen::Adapter.select == Listen::Adapter::Polling
+
+    assert_not_includes css, '.grid {'
+    assert_includes app.assets.watched_paths.map(&:first), @rails_root.join('app').to_s
+    file @rails_root.join('app/views/home/index.html.erb').to_s, '<div class="flex grid"></div>'
+    assert wait_until { css.include?('.grid {') }
+  end
+end
