@@ -135,8 +135,8 @@ class TestRailtie < BootTest
     app.initialize!
 
     assert env = app.assets
-    assert_equal Condenser::TerserMinifier, env.minifier_for("application/javascript")
-    assert_equal Condenser::SassMinifier, env.minifier_for("text/css")
+    assert_kind_of Condenser::TerserMinifier, env.minifier_for("application/javascript")
+    assert_kind_of Condenser::SassMinifier, env.minifier_for("text/css")
     assert_equal false, env.exporters['application/javascript'].first.options[:minify]
   end
 
@@ -147,7 +147,7 @@ class TestRailtie < BootTest
     assert env = app.assets
     assert_equal true, env.exporters['application/javascript'].first.options[:minify]
     assert_nil env.minifier_for("application/javascript")
-    assert_equal Condenser::LightningCSSMinifier, env.minifier_for("text/css")
+    assert_kind_of Condenser::LightningCSSMinifier, env.minifier_for("text/css")
   end
 
   def test_disabling_the_minifiers
@@ -252,7 +252,7 @@ class TestRailtie < BootTest
 
   def test_custom_compressors
     Rails.env = 'production'
-    compressor = Class.new
+    compressor = Class.new(Condenser::Processor).new
     app.configure do
       config.assets.js_minifier  = compressor
       config.assets.css_minifier = compressor
@@ -476,9 +476,9 @@ class TestRailtie < BootTest
     app.initialize!
 
     assert env = app.assets
-    assert_equal env.templates, {"application/erb"=>Condenser::Erubi, "application/ejs"=>Condenser::EjsTemplate}
+    assert_equal({"application/erb"=>Condenser::Erubi, "application/ejs"=>Condenser::EjsTemplate}, env.templates.transform_values(&:class))
     assert_equal env.preprocessors, {}
-    assert_equal env.transformers, {"text/scss"=>{"text/css"=>Condenser::ScssTransformer}, "application/jst"=>{"application/javascript"=>Condenser::JstTransformer}, "image/svg+xml"=>{"application/javascript"=>Condenser::SVGTransformer}}
+    assert_equal({"text/scss"=>{"text/css"=>Condenser::ScssTransformer}, "application/jst"=>{"application/javascript"=>Condenser::JstTransformer}, "image/svg+xml"=>{"application/javascript"=>Condenser::SVGTransformer}}, env.transformers.transform_values { |t| t.transform_values(&:class) })
     assert_equal env.postprocessors, {}
     assert_equal env.minifiers, {}
     assert_equal env.exporters, {}
@@ -490,20 +490,20 @@ class TestRailtie < BootTest
     
     app.configure do
       config.assets.pipeline do |condenser|
-        condenser.register_preprocessor('application/javascript', Condenser::JSAnalyzer)
-        condenser.register_postprocessor('text/css', ::Condenser::CSSMediaCombinerProcessor)
-        condenser.register_minifier('application/javascript', Condenser::TerserMinifier)
+        condenser.register_preprocessor('application/javascript', Condenser::JSAnalyzer.new)
+        condenser.register_postprocessor('text/css', ::Condenser::CSSMediaCombinerProcessor.new)
+        condenser.register_minifier('application/javascript', Condenser::TerserMinifier.new(condenser.npm_path))
         condenser.register_writer Condenser::ZlibWriter.new
       end
     end
     app.initialize!
 
     assert env = app.assets
-    assert_equal env.templates, {"application/erb"=>Condenser::Erubi, "application/ejs"=>Condenser::EjsTemplate}
-    assert_equal env.preprocessors, {"application/javascript"=>[Condenser::JSAnalyzer]}
-    assert_equal env.transformers, {"text/scss"=>{"text/css"=>Condenser::ScssTransformer}, "application/jst"=>{"application/javascript"=>Condenser::JstTransformer}, "image/svg+xml"=>{"application/javascript"=>Condenser::SVGTransformer}}
-    assert_equal env.postprocessors, {"text/css"=>[Condenser::CSSMediaCombinerProcessor]}
-    assert_equal env.minifiers, {"application/javascript"=>Condenser::TerserMinifier}
+    assert_equal({"application/erb"=>Condenser::Erubi, "application/ejs"=>Condenser::EjsTemplate}, env.templates.transform_values(&:class))
+    assert_equal({"application/javascript"=>[Condenser::JSAnalyzer]}, env.preprocessors.transform_values { |p| p.map(&:class) })
+    assert_equal({"text/scss"=>{"text/css"=>Condenser::ScssTransformer}, "application/jst"=>{"application/javascript"=>Condenser::JstTransformer}, "image/svg+xml"=>{"application/javascript"=>Condenser::SVGTransformer}}, env.transformers.transform_values { |t| t.transform_values(&:class) })
+    assert_equal({"text/css"=>[Condenser::CSSMediaCombinerProcessor]}, env.postprocessors.transform_values { |p| p.map(&:class) })
+    assert_equal({"application/javascript"=>Condenser::TerserMinifier}, env.minifiers.transform_values(&:class))
     assert_equal env.exporters, {}
   end
 
@@ -570,13 +570,13 @@ class TestRailtie < BootTest
     app.configure do
       config.assets.configure do |app, env|
         env.unregister_exporter('application/javascript')
-        env.register_exporter('application/javascript', Condenser::RollupProcessor)
+        env.register_exporter('application/javascript', Condenser::RollupProcessor.new(env.npm_path))
       end
     end
     app.initialize!
 
     assert env = app.assets
-    assert_equal({"application/javascript"=>[Condenser::RollupProcessor]}, env.exporters)
+    assert_equal({"application/javascript"=>[Condenser::RollupProcessor]}, env.exporters.transform_values { |e| e.map(&:class) })
   end
 
 

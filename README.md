@@ -49,7 +49,7 @@ To use it instead of Rolldown:
 ``` ruby
 config.assets.configure do |app, env|
   env.unregister_exporter('application/javascript')
-  env.register_exporter('application/javascript', Condenser::RollupProcessor)
+  env.register_exporter('application/javascript', Condenser::RollupProcessor.new(env.npm_path))
 end
 ```
 
@@ -123,16 +123,16 @@ config.assets.watch << 'data'
 
 The JS minifier to use to minify javascript sources. Valid options are
 `:rolldown` (the default, Rolldown minifies its own output), `:terser`, your own
-minifier, and `false` or `nil` to disable minification. `:terser` runs in Node,
-is npm-installed into the npm path when first used, and turns Rolldown's
-minifier off.
+minifier (a `Condenser::Processor` instance), and `false` or `nil` to disable
+minification. `:terser` runs in Node, is npm-installed into the npm path when
+first used, and turns Rolldown's minifier off.
 
 **`config.assets.css_minifier`**
 
 The CSS minifier to use to minify css sources. Valid options are
 `:lightning_css` (the default, which needs the `lightningcss` gem), `:sass`
-(which needs the `sass-embedded` gem), your own minifier, and `false` or `nil`
-to disable minification.
+(which needs the `sass-embedded` gem), your own minifier (a `Condenser::Processor`
+instance), and `false` or `nil` to disable minification.
 
 Assets are only minified outside the `development` and `test` environments.
 
@@ -155,7 +155,7 @@ for asset compiling.
 ``` ruby
 config.assets.configure do |app, env|
   require 'my_processor'
-  env.register_preprocessor 'application/javascript', MyProcessor
+  env.register_preprocessor 'application/javascript', MyProcessor.new
 end
 ```
 
@@ -185,6 +185,11 @@ HTTPS.
 - CSS is minified by Lightning CSS by default.
 - A custom Rolldown exporter must be an instance:
   `Condenser::RolldownProcessor.new(env.npm_path, minify: !Rails.env.local?, …)`.
+- Processors registered in `config.assets.pipeline` or `config.assets.configure`,
+  and minifiers set with `config.assets.js_minifier` or `css_minifier`, must be
+  instances of a `Condenser::Processor` subclass, e.g.
+  `env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer.new`.
+  Registering a class raises an `ArgumentError`.
 - A bare `// depends_on` path that matches nothing now raises
   `Condenser::FileNotFound` (globs don't). Files relative to the app root need
   a `!`, e.g. `// depends_on !config/foo.yml`. `config/` is watched by default
