@@ -117,9 +117,11 @@ class Condenser::Railtie < ::Rails::Railtie
     lightning_css: 'Condenser::LightningCSSMinifier'
   }.freeze
 
-  def resolve_minifier(value)
+  def resolve_minifier(value, env)
     if value.is_a?(Symbol) || value.is_a?(String)
-      (MINIFIERS[value.to_sym] || "Condenser::#{value.to_s.camelize}Minifier").constantize
+      klass = (MINIFIERS[value.to_sym] || "Condenser::#{value.to_s.camelize}Minifier").constantize
+      # Node minifiers (e.g. Terser) install their package into the npm path
+      klass <= Condenser::NodeProcessor ? klass.new(env.npm_path) : klass.new
     else
       value
     end
@@ -157,7 +159,7 @@ class Condenser::Railtie < ::Rails::Railtie
       rolldown_minifies = minify && js_minifier.to_s == 'rolldown'
 
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
-      env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer
+      env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer.new
       env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path,
         minify: rolldown_minifies,
         module_types: config.assets.module_types || {},
@@ -165,8 +167,8 @@ class Condenser::Railtie < ::Rails::Railtie
       )
 
       if minify
-        env.register_minifier       'application/javascript', resolve_minifier(js_minifier) if js_minifier && !rolldown_minifies
-        env.register_minifier       'text/css', resolve_minifier(config.assets.css_minifier) if config.assets.css_minifier
+        env.register_minifier       'application/javascript', resolve_minifier(js_minifier, env) if js_minifier && !rolldown_minifies
+        env.register_minifier       'text/css', resolve_minifier(config.assets.css_minifier, env) if config.assets.css_minifier
       end
 
       env.register_writer Condenser::FileWriter.new
