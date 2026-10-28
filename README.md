@@ -55,6 +55,61 @@ config.assets.configure do |app, env|
 end
 ```
 
+### Tailwind CSS
+
+To compile stylesheets with [Tailwind CSS](https://tailwindcss.com) v4, turn it
+on:
+
+``` ruby
+# config/application.rb
+config.assets.tailwind = true
+```
+
+``` css
+/* app/assets/stylesheets/application.css */
+@import "tailwindcss";
+```
+
+Stylesheets that `@import "tailwindcss"` or `@reference` another one are
+compiled by `Condenser::TailwindProcessor`; others are left as they are. Like
+Rolldown, it runs in Node, and `tailwindcss`, `@tailwindcss/node` and
+`@tailwindcss/oxide` are installed into the npm path when the asset
+environment is built, if they aren't there.
+
+Tailwind scans `app/` for class names: the views, components, helpers and
+JavaScript. Add other directories with `config.assets.tailwind_sources`,
+relative to `Rails.root` or absolute, such as templates in `lib/` or in a gem
+or engine:
+
+``` ruby
+config.assets.tailwind_sources = [
+  'lib/components',
+  File.join(Gem.loaded_specs['some_engine'].full_gem_path, 'app/views')
+]
+```
+
+Each has to be an existing directory. `app/` and the `tailwind_sources` are
+watched in development, so editing a template's classes rebuilds the CSS.
+`source(...)`, `source(none)` and `@source` in the stylesheet work as in
+Tailwind; `@source` paths outside `app/` and the `tailwind_sources` need to be
+added to `config.assets.watch` to rebuild a running server's CSS.
+
+Tailwind doesn't minify its output itself: the CSS minifier
+(`config.assets.css_minifier`, Lightning CSS by default) minifies the whole
+stylesheet outside development and test.
+
+The processor is only added to the default pipeline. With a custom
+`config.assets.pipeline`, register it yourself:
+
+``` ruby
+config.assets.pipeline do |env|
+  # ...
+  env.register_preprocessor 'text/css', Condenser::TailwindProcessor.new(env.npm_path,
+    sources: [Rails.root.join('app'), Rails.root.join('lib/components')]
+  )
+end
+```
+
 ## Usage
 
 ### Rake task
@@ -120,6 +175,16 @@ const foo = <%= YAML.load_file(Rails.root.join('config/foo.yml')).to_json %>;
 ``` ruby
 config.assets.watch << 'data'
 ```
+
+**`config.assets.tailwind`**
+
+Compiles stylesheets that `@import "tailwindcss"` with Tailwind. Defaults to
+`false`. See [Tailwind CSS](#tailwind-css).
+
+**`config.assets.tailwind_sources`**
+
+More directories for Tailwind to scan for class names, besides `app/`,
+relative to `Rails.root` or absolute. Defaults to `[]`.
 
 **`config.assets.js_minifier`**
 
@@ -244,6 +309,9 @@ HTTPS.
   its `exports` (`sass` or `style` condition), `sass` or `style` field.
 - A configured `config.assets.npm_path` is now respected instead of being
   reset to `Rails.root`.
+- Tailwind CSS v4 is built in: set `config.assets.tailwind = true`, and
+  `config.assets.tailwind_sources` for templates outside `app/`, instead of
+  building Tailwind's CSS separately.
 - Clear `tmp/cache/assets` and `public/assets` after upgrading.
 
 ## License
