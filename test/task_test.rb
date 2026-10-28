@@ -88,7 +88,6 @@ class TaskTest < ActiveSupport::TestCase
     File.write(oldfile, 'old')
     File.write(newfile, 'new')
     FileUtils.touch oldfile, mtime: (Time.now - 5.weeks)
-    FileUtils.touch newfile, mtime: (Time.now - 2.weeks)
     
     assert !@environment_ran
     digest_path = @assets['foo.js'].path
@@ -100,8 +99,9 @@ class TaskTest < ActiveSupport::TestCase
 
     @rake['assets:clean'].invoke
     assert_file "#{@path}/#{digest_path}"
+    assert_file @manifest_file
     assert_not_file oldfile
-    assert_file newfile
+    assert_not_file newfile
   end
 
 end
