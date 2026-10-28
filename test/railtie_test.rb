@@ -585,6 +585,7 @@ class TestRailtie < BootTest
     assert env = app.assets
     assert_equal({}, app.config.assets.module_types)
     assert_equal false, app.config.assets.sourcemap
+    assert_equal false, env.sourcemap
     assert_equal Condenser::RolldownProcessor.new(env.npm_path, minify: false).options,
       env.exporters['application/javascript'].first.options
   end
@@ -608,38 +609,51 @@ class TestRailtie < BootTest
   end
 
   def test_sourcemap
-    %i[linked hidden].each do |sourcemap|
+    [true, :linked, :headers].each do |sourcemap|
       app.config.assets.sourcemap = sourcemap
       assert env = Condenser::Railtie.build_environment(app, true)
-      assert_equal sourcemap, env.exporters['application/javascript'].first.options[:sourcemap]
+      assert_equal sourcemap, env.sourcemap
     end
+  end
+
+  def test_sourcemap_with_a_custom_pipeline
+    app.configure do
+      config.assets.sourcemap = :headers
+      config.assets.pipeline do |condenser|
+        condenser.register_exporter 'application/javascript', Condenser::RolldownProcessor.new(condenser.npm_path)
+      end
+    end
+    app.initialize!
+
+    assert_equal :headers, app.assets.sourcemap
   end
 
   def test_sourcemap_with_rolldown_minifying_in_production
     Rails.env = 'production'
     app.configure do
-      config.assets.sourcemap = :hidden
+      config.assets.sourcemap = :headers
     end
     app.initialize!
 
     assert env = app.assets
     assert_equal true, env.exporters['application/javascript'].first.options[:minify]
-    assert_equal :hidden, env.exporters['application/javascript'].first.options[:sourcemap]
+    assert_equal :headers, env.sourcemap
   end
 
   def test_invalid_sourcemap
     app.configure do
-      config.assets.sourcemap = :inline
+      config.assets.sourcemap = :hidden
     end
 
-    assert_raises(ArgumentError) { app.initialize! }
+    error = assert_raises(ArgumentError) { app.initialize! }
+    assert_equal 'sourcemap must be false, true, :linked or :headers, got :hidden', error.message
   end
 
   def test_server_serves_the_sourcemap
     file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s, "var Foo = 1; console.log(Foo);"
 
     app.configure do
-      config.assets.sourcemap = :linked
+      config.assets.sourcemap = true
     end
     app.initialize!
 
@@ -653,6 +667,26 @@ class TestRailtie < BootTest
     response = request.get("#{path}.map")
     assert_equal 200, response.status
     assert_includes JSON.parse(response.body)['sourcesContent'].join, "console.log(Foo)"
+  end
+
+  def test_server_sends_the_sourcemap_header_for_true_and_headers
+    file @rails_root.join('app', 'assets', 'javascript', 'foo.js').to_s, "var Foo = 1; console.log(Foo);"
+    app.initialize!
+
+    { true => true, linked: false, headers: true }.each do |sourcemap, header|
+      app.config.assets.sourcemap = sourcemap
+      env = Condenser::Railtie.build_environment(app, true)
+      path = "/#{env.find('foo.js').path}"
+
+      response = Rack::MockRequest.new(Condenser::Server.new(env)).get(path)
+      assert_equal 200, response.status
+      if header
+        assert_equal "#{path}.map", response.headers['sourcemap']
+      else
+        assert_nil response.headers['sourcemap']
+      end
+      assert_equal sourcemap != :headers, response.body.include?('sourceMappingURL')
+    end
   end
 
   def test_task_precompile_with_a_sourcemap

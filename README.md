@@ -152,30 +152,47 @@ import logo from 'logo.png'; // a data: URL
 
 **`config.assets.sourcemap`**
 
-Whether Rolldown writes a source map for each JavaScript bundle: `false` (the
-default), `:linked` or `:hidden`. It applies in every environment, so set it per
-environment in `config/environments/*.rb`. Development builds aren't minified,
-so maps there are optional.
+Sets condenser's `sourcemap` setting, whether a source map is written for each
+JavaScript bundle and how it's linked:
 
-- `:linked` appends `//# sourceMappingURL=…` to the bundle, so browser devtools
-  and error trackers such as Sentry fetch the map from your server.
-- `:hidden` writes the map without the comment, so browsers don't find it;
-  upload it to Sentry yourself (e.g. with `sentry-cli sourcemaps upload`).
+| Value | Map | `//# sourceMappingURL` comment | `SourceMap` header (development server) |
+|---|---|---|---|
+| `false` (default) | no | no | no |
+| `true` | yes | yes | yes |
+| `:linked` | yes | yes | no |
+| `:headers` | yes | no | yes |
+
+It applies in every environment, so set it per environment in
+`config/environments/*.rb`. Development builds aren't minified, so maps there
+are optional.
 
 ``` ruby
+# config/environments/development.rb
+config.assets.sourcemap = true
+
 # config/environments/production.rb
-config.assets.sourcemap = :hidden
+config.assets.sourcemap = :headers
 ```
 
-`rake assets:precompile` writes the map next to the bundle, as
-`application-<etag>.js.map`, and adds it to the manifest's `map` field;
-`assets:clean` keeps it and `assets:clobber` removes it. The development server
-serves it at the bundle's URL plus `.map`. A `:terser` `js_minifier` changes
-the bundle after Rolldown, so no map is written; use the default `:rolldown`.
+In production, precompiled assets are usually served by nginx or a CDN, not
+condenser's server, so nothing sends the `SourceMap` header. With `:headers`
+the map is on disk next to the bundle, with no link to it unless your web
+server adds the header. That's the setup for error trackers such as Sentry:
+upload the maps yourself (e.g. with `sentry-cli sourcemaps upload`). There's no
+separate hidden mode. Use `true` or `:linked` for browsers and error trackers
+to fetch the map from your server.
 
-Both settings only apply to the default pipeline; a custom
-`config.assets.pipeline` or Rolldown exporter passes `module_types:` and
-`sourcemap:` to `Condenser::RolldownProcessor.new` itself.
+`rake assets:precompile` writes the map next to the bundle, as
+`application-<etag>.js.map`, and adds it to the manifest's `sourcemap` field;
+`assets:clean` keeps it and `assets:clobber` removes it. The development server
+serves it at the bundle's URL plus `.map`. The map covers Rolldown's minifying
+and a `:terser` `js_minifier`. The setting is part of the asset cache key and
+etag, so changing it rebuilds the bundles.
+
+`config.assets.module_types` only applies to the default pipeline; a custom
+`config.assets.pipeline` or Rolldown exporter passes `module_types:` to
+`Condenser::RolldownProcessor.new` itself. `config.assets.sourcemap` applies to
+any pipeline, since it's set on the environment.
 
 **`config.assets.compressors`**
 

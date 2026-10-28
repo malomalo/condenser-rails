@@ -78,7 +78,7 @@ class Condenser::Railtie < ::Rails::Railtie
   config.assets.css_minifier = :lightning_css
   # Rolldown module types by extension, e.g. { png: :dataurl, ttf: :base64 }
   config.assets.module_types = {}
-  # Rolldown source maps: false, :linked or :hidden, in every environment
+  # Source maps: false, true, :linked or :headers, in every environment
   config.assets.sourcemap    = false
   # Directories, relative to Rails.root or absolute, whose files can be
   # `depends_on`'d and rebuild assets when they change
@@ -147,7 +147,7 @@ class Condenser::Railtie < ::Rails::Railtie
 
     # Set the npm path up front so exporters and custom pipelines can use it
     npm_path = config.assets.npm_path if config.assets.npm_path && File.directory?(config.assets.npm_path)
-    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s, npm_path: npm_path, listen: listen)
+    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s, npm_path: npm_path, listen: listen, sourcemap: config.assets.sourcemap || false)
 
     if config.assets._pipeline
       config.assets._pipeline.call(env)
@@ -162,8 +162,7 @@ class Condenser::Railtie < ::Rails::Railtie
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer.new
       env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path,
         minify: rolldown_minifies,
-        module_types: config.assets.module_types || {},
-        sourcemap: config.assets.sourcemap || false
+        module_types: config.assets.module_types || {}
       )
 
       if minify
