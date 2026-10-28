@@ -47,14 +47,21 @@ class TaskTest < ActiveSupport::TestCase
 
     assert @environment_ran
     assert_file "#{@path}/#{digest_path}"
+    export = @assets['foo.js']
+    assert_match(/\A\h{64}\z/, export.etag)
+    assert_equal "foo-#{export.etag}.js", export.path
+    assert_equal export.size, File.size("#{@path}/#{export.path}")
+    assert_equal Digest::SHA256.file("#{@path}/#{export.path}").hexdigest, export.hexdigest
+    assert_equal "sha256-#{Digest::SHA256.file("#{@path}/#{export.path}").base64digest}", export.integrity
+
     assert_file @manifest_file, {
       "foo.js" => {
-        path:       "foo-17f33ed85e0c3a6a6b5547160f09368a284b30b35ba238da4ca853deb28838be.js",
-        etag:       "17f33ed85e0c3a6a6b5547160f09368a284b30b35ba238da4ca853deb28838be",
+        path:       export.path,
+        etag:       export.etag,
         type:       "module",
-        digest:     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        size:       0,
-        integrity:  "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+        digest:     export.hexdigest,
+        size:       export.size,
+        integrity:  export.integrity,
         sourcemap:  nil
       }
     }
