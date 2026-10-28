@@ -31,14 +31,16 @@ compiled. The `rolldown` npm package is installed into the npm path
 To configure Rolldown, replace the default exporter with a configured
 `Condenser::RolldownProcessor` instance. Registering the class, as in earlier
 versions, no longer works. Pass `minify:` yourself, since it defaults to
-`false`:
+`false`. `module_types:` loads imports by file extension, e.g.
+`import logo from 'logo.png'` as a data URL:
 
 ``` ruby
 config.assets.configure do |app, env|
   env.unregister_exporter('application/javascript', Condenser::RolldownProcessor)
   env.register_exporter('application/javascript', Condenser::RolldownProcessor.new(env.npm_path,
     minify: !Rails.env.local?,
-    aliases: { 'jquery' => app.root.join('vendor/assets/javascripts/jquery.js').to_s }
+    aliases: { 'jquery' => app.root.join('vendor/assets/javascripts/jquery.js').to_s },
+    module_types: { png: :dataurl, ttf: :base64 }
   ))
 end
 ```
@@ -136,20 +138,6 @@ instance), and `false` or `nil` to disable minification.
 
 Assets are only minified outside the `development` and `test` environments.
 
-**`config.assets.module_types`**
-
-How Rolldown loads JavaScript imports, by file extension (without the dot).
-Values are Rolldown module types: `:base64`, `:binary`, `:dataurl`, `:empty`,
-`:js`, `:json`, `:jsx`, `:text`, `:ts` and `:tsx`. Defaults to `{}`.
-
-``` ruby
-config.assets.module_types = { png: :dataurl, ttf: :base64 }
-```
-
-``` js
-import logo from 'logo.png'; // a data: URL
-```
-
 **`config.assets.sourcemap`**
 
 Sets condenser's `sourcemap` setting, whether a source map is written for each
@@ -189,10 +177,8 @@ serves it at the bundle's URL plus `.map`. The map covers Rolldown's minifying
 and a `:terser` `js_minifier`. The setting is part of the asset cache key and
 etag, so changing it rebuilds the bundles.
 
-`config.assets.module_types` only applies to the default pipeline; a custom
-`config.assets.pipeline` or Rolldown exporter passes `module_types:` to
-`Condenser::RolldownProcessor.new` itself. `config.assets.sourcemap` applies to
-any pipeline, since it's set on the environment.
+`config.assets.sourcemap` applies to any pipeline, including a custom
+`config.assets.pipeline`, since it's set on the environment.
 
 **`config.assets.compressors`**
 

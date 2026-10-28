@@ -583,29 +583,10 @@ class TestRailtie < BootTest
     app.initialize!
 
     assert env = app.assets
-    assert_equal({}, app.config.assets.module_types)
     assert_equal false, app.config.assets.sourcemap
     assert_equal false, env.sourcemap
     assert_equal Condenser::RolldownProcessor.new(env.npm_path, minify: false).options,
       env.exporters['application/javascript'].first.options
-  end
-
-  def test_module_types
-    app.configure do
-      config.assets.module_types = { png: :dataurl, ttf: :base64 }
-    end
-    app.initialize!
-
-    assert env = app.assets
-    assert_equal({ "png" => "dataurl", "ttf" => "base64" }, env.exporters['application/javascript'].first.options[:module_types])
-  end
-
-  def test_invalid_module_types
-    app.configure do
-      config.assets.module_types = { '.png' => :dataurl }
-    end
-
-    assert_raises(ArgumentError) { app.initialize! }
   end
 
   def test_sourcemap
