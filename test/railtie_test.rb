@@ -676,7 +676,7 @@ class TestRailtie < BootTest
     assert_includes JSON.parse(File.read("#{js.first}.map"))['sourcesContent'].join, "console.log(Foo)"
 
     manifest = JSON.parse(File.read(app.assets_manifest.filename))
-    assert_equal "#{File.basename(js.first)}.map", manifest['foo.js']['map']
+    assert_equal "#{File.basename(js.first)}.map", manifest['foo.js']['sourcemap']
 
     Rake.application['assets:clean'].execute
     assert File.exist?("#{js.first}.map")
