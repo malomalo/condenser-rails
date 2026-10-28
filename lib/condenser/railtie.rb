@@ -76,6 +76,8 @@ class Condenser::Railtie < ::Rails::Railtie
   # Used outside development and test; set to nil or false to disable
   config.assets.js_minifier  = :rolldown
   config.assets.css_minifier = :lightning_css
+  # Source maps: false, true, :linked or :headers, in every environment
+  config.assets.sourcemap    = false
   # Directories, relative to Rails.root or absolute, whose files can be
   # `depends_on`'d and rebuild assets when they change
   config.assets.watch        = ['config']
@@ -147,7 +149,7 @@ class Condenser::Railtie < ::Rails::Railtie
 
     # Set the npm path up front so exporters and custom pipelines can use it
     npm_path = config.assets.npm_path if config.assets.npm_path && File.directory?(config.assets.npm_path)
-    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s, npm_path: npm_path, listen: listen)
+    env = Condenser.new(pipeline: false, logger: ::Rails.logger, base: app.root.to_s, npm_path: npm_path, listen: listen, sourcemap: config.assets.sourcemap || false)
 
     if config.assets._pipeline
       config.assets._pipeline.call(env)
