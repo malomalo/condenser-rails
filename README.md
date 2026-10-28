@@ -31,14 +31,16 @@ compiled. The `rolldown` npm package is installed into the npm path
 To configure Rolldown, replace the default exporter with a configured
 `Condenser::RolldownProcessor` instance. Registering the class, as in earlier
 versions, no longer works. Pass `minify:` yourself, since it defaults to
-`false`:
+`false`. `module_types:` loads imports by file extension, e.g.
+`import logo from 'logo.png'` as a data URL:
 
 ``` ruby
 config.assets.configure do |app, env|
   env.unregister_exporter('application/javascript', Condenser::RolldownProcessor)
   env.register_exporter('application/javascript', Condenser::RolldownProcessor.new(env.npm_path,
     minify: !Rails.env.local?,
-    aliases: { 'jquery' => app.root.join('vendor/assets/javascripts/jquery.js').to_s }
+    aliases: { 'jquery' => app.root.join('vendor/assets/javascripts/jquery.js').to_s },
+    module_types: { png: :dataurl, ttf: :base64 }
   ))
 end
 ```
@@ -135,6 +137,48 @@ The CSS minifier to use to minify css sources. Valid options are
 instance), and `false` or `nil` to disable minification.
 
 Assets are only minified outside the `development` and `test` environments.
+
+**`config.assets.sourcemap`**
+
+Sets condenser's `sourcemap` setting, whether a source map is written for each
+JavaScript bundle and how it's linked:
+
+| Value | Map | `//# sourceMappingURL` comment | `SourceMap` header (development server) |
+|---|---|---|---|
+| `false` (default) | no | no | no |
+| `true` | yes | yes | yes |
+| `:linked` | yes | yes | no |
+| `:headers` | yes | no | yes |
+
+It applies in every environment, so set it per environment in
+`config/environments/*.rb`. Development builds aren't minified, so maps there
+are optional.
+
+``` ruby
+# config/environments/development.rb
+config.assets.sourcemap = true
+
+# config/environments/production.rb
+config.assets.sourcemap = :headers
+```
+
+In production, precompiled assets are usually served by nginx or a CDN, not
+condenser's server, so nothing sends the `SourceMap` header. With `:headers`
+the map is on disk next to the bundle, with no link to it unless your web
+server adds the header. That's the setup for error trackers such as Sentry:
+upload the maps yourself (e.g. with `sentry-cli sourcemaps upload`). There's no
+separate hidden mode. Use `true` or `:linked` for browsers and error trackers
+to fetch the map from your server.
+
+`rake assets:precompile` writes the map next to the bundle, as
+`application-<etag>.js.map`, and adds it to the manifest's `sourcemap` field;
+`assets:clean` keeps it and `assets:clobber` removes it. The development server
+serves it at the bundle's URL plus `.map`. The map covers Rolldown's minifying
+and a `:terser` `js_minifier`. The setting is part of the asset cache key and
+etag, so changing it rebuilds the bundles.
+
+`config.assets.sourcemap` applies to any pipeline, including a custom
+`config.assets.pipeline`, since it's set on the environment.
 
 **`config.assets.compressors`**
 
