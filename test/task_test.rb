@@ -61,7 +61,8 @@ class TaskTest < ActiveSupport::TestCase
         type:       "module",
         digest:     export.hexdigest,
         size:       export.size,
-        integrity:  export.integrity
+        integrity:  export.integrity,
+        sourcemap:  nil
       }
     }
   end
