@@ -28,31 +28,24 @@ default. Rolldown runs in Node, so Node must be installed wherever assets are
 compiled. The `rolldown` npm package is installed into the npm path
 (`config.assets.npm_path`, `Rails.root` by default) the first time it's needed.
 
-To configure Rolldown, replace the default exporter with a configured
-`Condenser::RolldownProcessor` instance. Registering the class, as in earlier
-versions, no longer works. Pass `minify:` yourself, since it defaults to
-`false`. `module_types:` loads imports by file extension, e.g.
-`import logo from 'logo.png'` as a data URL:
+To configure Rolldown, pass its options with `config.assets.js_bundler` (see
+[`config.assets.js_bundler`](#initializer-options)). `minify:` is set for you
+by `config.assets.js_minifier`. `module_types:` loads imports by file
+extension, e.g. `import logo from 'logo.png'` as a data URL:
 
 ``` ruby
-config.assets.configure do |app, env|
-  env.unregister_exporter('application/javascript', Condenser::RolldownProcessor)
-  env.register_exporter('application/javascript', Condenser::RolldownProcessor.new(env.npm_path,
-    minify: !Rails.env.local?,
-    aliases: { 'jquery' => app.root.join('vendor/assets/javascripts/jquery.js').to_s },
-    module_types: { png: :dataurl, ttf: :base64 }
-  ))
-end
+config.assets.js_bundler = { rolldown: {
+  aliases: { 'jquery' => Rails.root.join('vendor/assets/javascripts/jquery.js').to_s },
+  module_types: { png: :dataurl, ttf: :base64 }
+} }
 ```
 
-Rollup is deprecated, and will be removed in Condenser 3.
-To use it instead of Rolldown:
+Rollup is deprecated, and will be removed in Condenser 3. To use it instead of
+Rolldown, which also minifies by default, pick another minifier:
 
 ``` ruby
-config.assets.configure do |app, env|
-  env.unregister_exporter('application/javascript')
-  env.register_exporter('application/javascript', Condenser::RollupProcessor.new(env.npm_path))
-end
+config.assets.js_bundler  = :rollup
+config.assets.js_minifier = :terser
 ```
 
 ### Tailwind CSS
@@ -192,7 +185,9 @@ The JS minifier to use to minify javascript sources. Valid options are
 `:rolldown` (the default, Rolldown minifies its own output), `:terser`, your own
 minifier (a `Condenser::Processor` instance), and `false` or `nil` to disable
 minification. `:terser` runs in Node, is npm-installed into the npm path when
-first used, and turns Rolldown's minifier off.
+first used, and turns Rolldown's minifier off. A `js_minifier` that names the
+`js_bundler`, like the default `:rolldown`, has the bundler minify its own
+output.
 
 **`config.assets.css_minifier`**
 
@@ -202,6 +197,21 @@ The CSS minifier to use to minify css sources. Valid options are
 instance), and `false` or `nil` to disable minification.
 
 Assets are only minified outside the `development` and `test` environments.
+
+**`config.assets.js_bundler`**
+
+The exporter that bundles JavaScript. Valid options are `:rolldown` (the
+default), `:rollup` (deprecated), either one with options, and your own exporter
+(a `Condenser::Processor` instance). Options are passed to the exporter, e.g.
+`keep_names:`, `aliases:`, `platform:` or `module_types:` for Rolldown:
+
+``` ruby
+config.assets.js_bundler = { rolldown: { keep_names: true } }
+```
+
+`minify:` is set by `config.assets.js_minifier` and can't be set here; an
+exporter instance minifies (or not) by itself. It isn't used with a custom
+`config.assets.pipeline`.
 
 **`config.assets.sourcemap`**
 
@@ -292,7 +302,10 @@ HTTPS.
 - JavaScript is bundled and minified by Rolldown by default. `:uglify` is
   removed; `:terser` still works, and turns Rolldown's minifier off.
 - CSS is minified by Lightning CSS by default.
-- A custom Rolldown exporter must be an instance:
+- Configure Rolldown with `config.assets.js_bundler`, e.g.
+  `{ rolldown: { aliases: { … } } }`, instead of registering
+  `Condenser::RolldownProcessor` in a `configure` block. A custom exporter
+  registered yourself must be an instance:
   `Condenser::RolldownProcessor.new(env.npm_path, minify: !Rails.env.local?, …)`.
 - Processors registered in `config.assets.pipeline` or `config.assets.configure`,
   and minifiers set with `config.assets.js_minifier` or `css_minifier`, must be
