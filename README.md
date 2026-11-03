@@ -192,7 +192,8 @@ The JS minifier to use to minify javascript sources. Valid options are
 `:rolldown` (the default, Rolldown minifies its own output), `:terser`, your own
 minifier (a `Condenser::Processor` instance), and `false` or `nil` to disable
 minification. `:terser` runs in Node, is npm-installed into the npm path when
-first used, and turns Rolldown's minifier off.
+first used, and turns Rolldown's minifier off. `:rolldown` needs the `:rolldown`
+`js_bundler`.
 
 **`config.assets.css_minifier`**
 
@@ -203,16 +204,20 @@ instance), and `false` or `nil` to disable minification.
 
 Assets are only minified outside the `development` and `test` environments.
 
-**`config.assets.rolldown`**
+**`config.assets.js_bundler`**
 
-Options for the default `Condenser::RolldownProcessor`, e.g. `keep_names:`,
-`aliases:`, `platform:` or `module_types:`. Defaults to `{}`. `minify:` is set
-by `config.assets.js_minifier` and can't be set here. It isn't used with
-a custom `config.assets.pipeline`.
+The exporter that bundles JavaScript. Valid options are `:rolldown` (the
+default), `:rollup` (deprecated), either one with options, and your own exporter
+(a `Condenser::Processor` instance). Options are passed to the exporter, e.g.
+`keep_names:`, `aliases:`, `platform:` or `module_types:` for Rolldown:
 
 ``` ruby
-config.assets.rolldown = { keep_names: true }
+config.assets.js_bundler = { rolldown: { keep_names: true } }
 ```
+
+`minify:` is set by `config.assets.js_minifier` and can't be set here; an
+exporter instance minifies (or not) by itself. It isn't used with a custom
+`config.assets.pipeline`.
 
 **`config.assets.sourcemap`**
 

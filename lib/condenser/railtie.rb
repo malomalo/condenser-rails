@@ -76,8 +76,9 @@ class Condenser::Railtie < ::Rails::Railtie
   # Used outside development and test; set to nil or false to disable
   config.assets.js_minifier  = :rolldown
   config.assets.css_minifier = :lightning_css
-  # Options for the RolldownProcessor, e.g. { keep_names: true }
-  config.assets.rolldown     = {}
+  # :rolldown, :rollup, a name with options like { rolldown: { keep_names: true } },
+  # or an exporter instance
+  config.assets.js_bundler   = :rolldown
   # Source maps: false, true, :linked or :headers, in every environment
   config.assets.sourcemap    = false
   # Directories, relative to Rails.root or absolute, whose files can be
@@ -131,6 +132,42 @@ class Condenser::Railtie < ::Rails::Railtie
     end
   end
   
+  # Bundler names and their exporter classes
+  BUNDLERS = {
+    rolldown: 'Condenser::RolldownProcessor',
+    rollup: 'Condenser::RollupProcessor'
+  }.freeze
+
+  # Returns the bundler's name (nil for an instance) and its options
+  def parse_bundler(value)
+    name, options = case value
+    when Symbol, String
+      [value, {}]
+    when Hash
+      value.size == 1 ? value.first : nil
+    when Condenser::Processor
+      return [nil, nil]
+    end
+
+    unless (name.is_a?(Symbol) || name.is_a?(String)) && BUNDLERS.key?(name.to_sym) && options.is_a?(Hash)
+      raise ArgumentError, "js_bundler must be :rolldown, :rollup, { name => options } or a Condenser::Processor, got #{value.inspect}"
+    end
+    options = options.symbolize_keys
+    if options.key?(:minify)
+      raise ArgumentError, "js_bundler can't set minify; use config.assets.js_minifier"
+    end
+
+    [name.to_sym, options]
+  end
+
+  def resolve_bundler(value, env, minify:)
+    name, options = parse_bundler(value)
+    return value if name.nil?
+
+    options = options.merge(minify: minify) if name == :rolldown
+    BUNDLERS[name].constantize.new(env.npm_path, **options)
+  end
+
   def resolve_writer(value)
     if value.is_a?(Symbol) || value.is_a?(String)
       "Condenser::#{value.to_s.camelize}Writer".constantize.new
@@ -159,15 +196,16 @@ class Condenser::Railtie < ::Rails::Railtie
       # Only minify outside development and test
       minify = !::Rails.env.local?
       js_minifier = config.assets.js_minifier
+      js_bundler = config.assets.js_bundler
+      bundler_name, = parse_bundler(js_bundler)
+      # :rolldown is Rolldown's built-in minifier; a custom exporter instance
+      # minifies (or not) by itself
+      rolldown_minifier = js_minifier.to_s == 'rolldown'
+      if rolldown_minifier && bundler_name && bundler_name != :rolldown
+        raise ArgumentError, "js_minifier :rolldown needs the :rolldown js_bundler; set js_minifier to :terser or nil"
+      end
       # Rolldown minifies its own output unless another JS minifier is chosen
-      rolldown_minifies = minify && js_minifier.to_s == 'rolldown'
-      rolldown_options = config.assets.rolldown || {}
-      unless rolldown_options.is_a?(Hash)
-        raise ArgumentError, "config.assets.rolldown must be a Hash, got #{rolldown_options.inspect}"
-      end
-      if rolldown_options.key?(:minify) || rolldown_options.key?('minify')
-        raise ArgumentError, "config.assets.rolldown can't set minify; use config.assets.js_minifier"
-      end
+      rolldown_minifies = minify && rolldown_minifier
 
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer.new
@@ -177,10 +215,10 @@ class Condenser::Railtie < ::Rails::Railtie
         sources = ['app', *config.assets.tailwind_sources].map { |path| File.expand_path(path, app.root) }
         env.register_preprocessor 'text/css', Condenser::TailwindProcessor.new(env.npm_path, sources: sources, minify: false)
       end
-      env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path, **rolldown_options.symbolize_keys, minify: rolldown_minifies)
+      env.register_exporter       'application/javascript', resolve_bundler(js_bundler, env, minify: rolldown_minifies)
 
       if minify
-        env.register_minifier       'application/javascript', resolve_minifier(js_minifier, env) if js_minifier && !rolldown_minifies
+        env.register_minifier       'application/javascript', resolve_minifier(js_minifier, env) if js_minifier && !rolldown_minifier
         env.register_minifier       'text/css', resolve_minifier(config.assets.css_minifier, env) if config.assets.css_minifier
       end
 

@@ -589,10 +589,10 @@ class TestRailtie < BootTest
       env.exporters['application/javascript'].first.options
   end
 
-  def test_rolldown_options
+  def test_js_bundler_with_options
     Rails.env = 'production'
     app.configure do
-      config.assets.rolldown = { keep_names: true, platform: 'browser' }
+      config.assets.js_bundler = { rolldown: { keep_names: true, platform: 'browser' } }
     end
     app.initialize!
 
@@ -603,22 +603,69 @@ class TestRailtie < BootTest
     assert_equal true, options[:minify]
   end
 
-  def test_rolldown_options_cant_set_minify
+  def test_js_bundler_with_options_does_not_minify_in_development
+    Rails.env = 'development'
     app.configure do
-      config.assets.rolldown = { minify: true }
+      config.assets.js_bundler = { 'rolldown' => { 'keep_names' => true } }
     end
+    app.initialize!
 
-    error = assert_raises(ArgumentError) { app.initialize! }
-    assert_equal "config.assets.rolldown can't set minify; use config.assets.js_minifier", error.message
+    assert env = app.assets
+    options = env.exporters['application/javascript'].first.options
+    assert_equal true, options[:keep_names]
+    assert_equal false, options[:minify]
   end
 
-  def test_rolldown_options_must_be_a_hash
+  def test_js_bundler_rollup
+    Rails.env = 'production'
     app.configure do
-      config.assets.rolldown = [:keep_names]
+      config.assets.js_bundler = :rollup
+      config.assets.js_minifier = :terser
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal [Condenser::RollupProcessor], env.exporters['application/javascript'].map(&:class)
+    assert_kind_of Condenser::TerserMinifier, env.minifier_for("application/javascript")
+  end
+
+  def test_js_bundler_rollup_needs_another_js_minifier
+    app.configure do
+      config.assets.js_bundler = :rollup
     end
 
     error = assert_raises(ArgumentError) { app.initialize! }
-    assert_equal 'config.assets.rolldown must be a Hash, got [:keep_names]', error.message
+    assert_equal 'js_minifier :rolldown needs the :rolldown js_bundler; set js_minifier to :terser or nil', error.message
+  end
+
+  def test_js_bundler_instance
+    Rails.env = 'production'
+    bundler = Condenser::RolldownProcessor.new(nil, minify: true, keep_names: true)
+    app.configure do
+      config.assets.js_bundler = bundler
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_same bundler, env.exporters['application/javascript'].first
+    assert_nil env.minifier_for("application/javascript")
+  end
+
+  def test_js_bundler_cant_set_minify
+    app.configure do
+      config.assets.js_bundler = { rolldown: { minify: true } }
+    end
+
+    error = assert_raises(ArgumentError) { app.initialize! }
+    assert_equal "js_bundler can't set minify; use config.assets.js_minifier", error.message
+  end
+
+  def test_invalid_js_bundler
+    [:webpack, { rolldown: {}, rollup: {} }, { rolldown: true }, [:rolldown]].each do |value|
+      app.config.assets.js_bundler = value
+      error = assert_raises(ArgumentError) { Condenser::Railtie.build_environment(app, true) }
+      assert_equal "js_bundler must be :rolldown, :rollup, { name => options } or a Condenser::Processor, got #{value.inspect}", error.message
+    end
   end
 
   def test_sourcemap
