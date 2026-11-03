@@ -132,13 +132,7 @@ class Condenser::Railtie < ::Rails::Railtie
     end
   end
   
-  # Bundler names and their exporter classes
-  BUNDLERS = {
-    rolldown: 'Condenser::RolldownProcessor',
-    rollup: 'Condenser::RollupProcessor'
-  }.freeze
-
-  # Returns the bundler's name (nil for an instance) and its options
+  # Returns the bundler's class (nil for an instance) and its options
   def parse_bundler(value)
     name, options = case value
     when Symbol, String
@@ -149,7 +143,8 @@ class Condenser::Railtie < ::Rails::Railtie
       return [nil, nil]
     end
 
-    unless (name.is_a?(Symbol) || name.is_a?(String)) && BUNDLERS.key?(name.to_sym) && options.is_a?(Hash)
+    klass = "Condenser::#{name.to_s.camelize}Processor".safe_constantize if name.is_a?(Symbol) || name.is_a?(String)
+    unless klass.is_a?(Class) && klass <= Condenser::Processor && options.is_a?(Hash)
       raise ArgumentError, "js_bundler must be :rolldown, :rollup, { name => options } or a Condenser::Processor, got #{value.inspect}"
     end
     options = options.symbolize_keys
@@ -157,15 +152,15 @@ class Condenser::Railtie < ::Rails::Railtie
       raise ArgumentError, "js_bundler can't set minify; use config.assets.js_minifier"
     end
 
-    [name.to_sym, options]
+    [klass, options]
   end
 
   def resolve_bundler(value, env, minify:)
-    name, options = parse_bundler(value)
-    return value if name.nil?
+    klass, options = parse_bundler(value)
+    return value if klass.nil?
 
-    options = options.merge(minify: minify) if name == :rolldown
-    BUNDLERS[name].constantize.new(env.npm_path, **options)
+    options = options.merge(minify: minify) if klass <= Condenser::RolldownProcessor
+    klass.new(env.npm_path, **options)
   end
 
   def resolve_writer(value)
@@ -197,11 +192,11 @@ class Condenser::Railtie < ::Rails::Railtie
       minify = !::Rails.env.local?
       js_minifier = config.assets.js_minifier
       js_bundler = config.assets.js_bundler
-      bundler_name, = parse_bundler(js_bundler)
+      bundler_class, = parse_bundler(js_bundler)
       # :rolldown is Rolldown's built-in minifier; a custom exporter instance
       # minifies (or not) by itself
       rolldown_minifier = js_minifier.to_s == 'rolldown'
-      if rolldown_minifier && bundler_name && bundler_name != :rolldown
+      if rolldown_minifier && bundler_class && !(bundler_class <= Condenser::RolldownProcessor)
         raise ArgumentError, "js_minifier :rolldown needs the :rolldown js_bundler; set js_minifier to :terser or nil"
       end
       # Rolldown minifies its own output unless another JS minifier is chosen
