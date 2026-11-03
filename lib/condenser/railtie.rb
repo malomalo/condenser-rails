@@ -122,9 +122,13 @@ class Condenser::Railtie < ::Rails::Railtie
     lightning_css: 'Condenser::LightningCSSMinifier'
   }.freeze
 
+  def minifier_class_name(value)
+    MINIFIERS[value.to_sym] || "Condenser::#{value.to_s.camelize}Minifier"
+  end
+
   def resolve_minifier(value, env)
     if value.is_a?(Symbol) || value.is_a?(String)
-      klass = (MINIFIERS[value.to_sym] || "Condenser::#{value.to_s.camelize}Minifier").constantize
+      klass = minifier_class_name(value).constantize
       # Node minifiers (e.g. Terser) install their package into the npm path
       klass <= Condenser::NodeProcessor ? klass.new(env.npm_path) : klass.new
     else
@@ -132,7 +136,8 @@ class Condenser::Railtie < ::Rails::Railtie
     end
   end
   
-  # Returns the bundler's class (nil for an instance) and its options
+  # Returns the bundler's name, class and options; an instance's name comes
+  # from its class, e.g. "rolldown" for a Condenser::RolldownProcessor
   def parse_bundler(value)
     name, options = case value
     when Symbol, String
@@ -140,7 +145,7 @@ class Condenser::Railtie < ::Rails::Railtie
     when Hash
       value.size == 1 ? value.first : nil
     when Condenser::Processor
-      return [nil, nil]
+      return [value.class.name.to_s.demodulize.delete_suffix('Processor').underscore, nil, nil]
     end
 
     klass = "Condenser::#{name.to_s.camelize}Processor".safe_constantize if name.is_a?(Symbol) || name.is_a?(String)
@@ -152,14 +157,15 @@ class Condenser::Railtie < ::Rails::Railtie
       raise ArgumentError, "js_bundler can't set minify; use config.assets.js_minifier"
     end
 
-    [klass, options]
+    [name.to_s, klass, options]
   end
 
+  # minify - Passed to the bundler unless nil
   def resolve_bundler(value, env, minify:)
-    klass, options = parse_bundler(value)
+    _, klass, options = parse_bundler(value)
     return value if klass.nil?
 
-    options = options.merge(minify: minify) if klass <= Condenser::RolldownProcessor
+    options = options.merge(minify: minify) unless minify.nil?
     klass.new(env.npm_path, **options)
   end
 
@@ -192,15 +198,13 @@ class Condenser::Railtie < ::Rails::Railtie
       minify = !::Rails.env.local?
       js_minifier = config.assets.js_minifier
       js_bundler = config.assets.js_bundler
-      bundler_class, = parse_bundler(js_bundler)
-      # :rolldown is Rolldown's built-in minifier; a custom exporter instance
-      # minifies (or not) by itself
-      rolldown_minifier = js_minifier.to_s == 'rolldown'
-      if rolldown_minifier && bundler_class && !(bundler_class <= Condenser::RolldownProcessor)
-        raise ArgumentError, "js_minifier :rolldown needs the :rolldown js_bundler; set js_minifier to :terser or nil"
+      bundler_name, = parse_bundler(js_bundler)
+      # The bundler minifies its own output when the js_minifier names it; an
+      # exporter instance minifies (or not) by itself
+      bundler_minifies = js_minifier.to_s == bundler_name
+      if (js_minifier.is_a?(Symbol) || js_minifier.is_a?(String)) && !bundler_minifies && !minifier_class_name(js_minifier).safe_constantize
+        raise ArgumentError, "js_minifier #{js_minifier.inspect} isn't a minifier or the js_bundler; set js_minifier to :terser or nil"
       end
-      # Rolldown minifies its own output unless another JS minifier is chosen
-      rolldown_minifies = minify && rolldown_minifier
 
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer.new
@@ -210,10 +214,10 @@ class Condenser::Railtie < ::Rails::Railtie
         sources = ['app', *config.assets.tailwind_sources].map { |path| File.expand_path(path, app.root) }
         env.register_preprocessor 'text/css', Condenser::TailwindProcessor.new(env.npm_path, sources: sources, minify: false)
       end
-      env.register_exporter       'application/javascript', resolve_bundler(js_bundler, env, minify: rolldown_minifies)
+      env.register_exporter       'application/javascript', resolve_bundler(js_bundler, env, minify: bundler_minifies ? minify : nil)
 
       if minify
-        env.register_minifier       'application/javascript', resolve_minifier(js_minifier, env) if js_minifier && !rolldown_minifier
+        env.register_minifier       'application/javascript', resolve_minifier(js_minifier, env) if js_minifier && !bundler_minifies
         env.register_minifier       'text/css', resolve_minifier(config.assets.css_minifier, env) if config.assets.css_minifier
       end
 

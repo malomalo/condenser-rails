@@ -635,7 +635,7 @@ class TestRailtie < BootTest
     end
 
     error = assert_raises(ArgumentError) { app.initialize! }
-    assert_equal 'js_minifier :rolldown needs the :rolldown js_bundler; set js_minifier to :terser or nil', error.message
+    assert_equal "js_minifier :rolldown isn't a minifier or the js_bundler; set js_minifier to :terser or nil", error.message
   end
 
   def test_js_bundler_instance
@@ -649,6 +649,16 @@ class TestRailtie < BootTest
     assert env = app.assets
     assert_same bundler, env.exporters['application/javascript'].first
     assert_nil env.minifier_for("application/javascript")
+  end
+
+  def test_js_bundler_instance_named_by_its_class
+    bundler = Condenser::RollupProcessor.new(@rails_root.to_s)
+    app.configure do
+      config.assets.js_bundler = bundler
+    end
+
+    error = assert_raises(ArgumentError) { app.initialize! }
+    assert_equal "js_minifier :rolldown isn't a minifier or the js_bundler; set js_minifier to :terser or nil", error.message
   end
 
   def test_js_bundler_cant_set_minify

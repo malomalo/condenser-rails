@@ -192,8 +192,9 @@ The JS minifier to use to minify javascript sources. Valid options are
 `:rolldown` (the default, Rolldown minifies its own output), `:terser`, your own
 minifier (a `Condenser::Processor` instance), and `false` or `nil` to disable
 minification. `:terser` runs in Node, is npm-installed into the npm path when
-first used, and turns Rolldown's minifier off. `:rolldown` needs the `:rolldown`
-`js_bundler`.
+first used, and turns Rolldown's minifier off. A `js_minifier` that names the
+`js_bundler`, like the default `:rolldown`, has the bundler minify its own
+output.
 
 **`config.assets.css_minifier`**
 
