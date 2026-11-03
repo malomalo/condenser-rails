@@ -117,10 +117,15 @@ class Condenser::Railtie < ::Rails::Railtie
     Condenser::Rails::Task.new(app)
   end
   
+  # A name ignoring case and underscores, e.g. "lightningcss" for :lightning_css
+  def normalize_name(name)
+    name.to_s.delete('_').downcase
+  end
+
   # The Condenser class for a name and suffix, ignoring case and underscores,
   # e.g. Condenser::LightningCSSMinifier for :lightning_css and "Minifier"
   def condenser_class(name, suffix)
-    target = "#{name.to_s.delete('_')}#{suffix}"
+    target = "#{normalize_name(name)}#{suffix}"
     constant = Condenser.constants.find { |c| c.to_s.casecmp?(target) }
     Condenser.const_get(constant) if constant
   end
@@ -201,7 +206,7 @@ class Condenser::Railtie < ::Rails::Railtie
       bundler_name, = parse_bundler(js_bundler)
       # The bundler minifies its own output when the js_minifier names it; an
       # exporter instance minifies (or not) by itself
-      bundler_minifies = js_minifier.to_s == bundler_name
+      bundler_minifies = normalize_name(js_minifier) == normalize_name(bundler_name)
       if (js_minifier.is_a?(Symbol) || js_minifier.is_a?(String)) && !bundler_minifies && !condenser_class(js_minifier, 'Minifier')
         raise ArgumentError, "js_minifier #{js_minifier.inspect} isn't a minifier or the js_bundler; set js_minifier to :terser or nil"
       end

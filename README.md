@@ -28,31 +28,24 @@ default. Rolldown runs in Node, so Node must be installed wherever assets are
 compiled. The `rolldown` npm package is installed into the npm path
 (`config.assets.npm_path`, `Rails.root` by default) the first time it's needed.
 
-To configure Rolldown, replace the default exporter with a configured
-`Condenser::RolldownProcessor` instance. Registering the class, as in earlier
-versions, no longer works. Pass `minify:` yourself, since it defaults to
-`false`. `module_types:` loads imports by file extension, e.g.
-`import logo from 'logo.png'` as a data URL:
+To configure Rolldown, pass its options with `config.assets.js_bundler` (see
+[`config.assets.js_bundler`](#initializer-options)). `minify:` is set for you
+by `config.assets.js_minifier`. `module_types:` loads imports by file
+extension, e.g. `import logo from 'logo.png'` as a data URL:
 
 ``` ruby
-config.assets.configure do |app, env|
-  env.unregister_exporter('application/javascript', Condenser::RolldownProcessor)
-  env.register_exporter('application/javascript', Condenser::RolldownProcessor.new(env.npm_path,
-    minify: !Rails.env.local?,
-    aliases: { 'jquery' => app.root.join('vendor/assets/javascripts/jquery.js').to_s },
-    module_types: { png: :dataurl, ttf: :base64 }
-  ))
-end
+config.assets.js_bundler = { rolldown: {
+  aliases: { 'jquery' => Rails.root.join('vendor/assets/javascripts/jquery.js').to_s },
+  module_types: { png: :dataurl, ttf: :base64 }
+} }
 ```
 
-Rollup is deprecated, and will be removed in Condenser 3.
-To use it instead of Rolldown:
+Rollup is deprecated, and will be removed in Condenser 3. To use it instead of
+Rolldown, which also minifies by default, pick another minifier:
 
 ``` ruby
-config.assets.configure do |app, env|
-  env.unregister_exporter('application/javascript')
-  env.register_exporter('application/javascript', Condenser::RollupProcessor.new(env.npm_path))
-end
+config.assets.js_bundler  = :rollup
+config.assets.js_minifier = :terser
 ```
 
 ### Tailwind CSS
@@ -309,7 +302,10 @@ HTTPS.
 - JavaScript is bundled and minified by Rolldown by default. `:uglify` is
   removed; `:terser` still works, and turns Rolldown's minifier off.
 - CSS is minified by Lightning CSS by default.
-- A custom Rolldown exporter must be an instance:
+- Configure Rolldown with `config.assets.js_bundler`, e.g.
+  `{ rolldown: { aliases: { … } } }`, instead of registering
+  `Condenser::RolldownProcessor` in a `configure` block. A custom exporter
+  registered yourself must be an instance:
   `Condenser::RolldownProcessor.new(env.npm_path, minify: !Rails.env.local?, …)`.
 - Processors registered in `config.assets.pipeline` or `config.assets.configure`,
   and minifiers set with `config.assets.js_minifier` or `css_minifier`, must be

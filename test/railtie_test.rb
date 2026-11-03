@@ -661,6 +661,19 @@ class TestRailtie < BootTest
     assert_equal "js_minifier :rolldown isn't a minifier or the js_bundler; set js_minifier to :terser or nil", error.message
   end
 
+  def test_js_minifier_names_the_js_bundler_ignoring_case_and_underscores
+    Rails.env = 'production'
+    app.configure do
+      config.assets.js_bundler = 'Rolldown'
+      config.assets.js_minifier = 'ROLL_DOWN'
+    end
+    app.initialize!
+
+    assert env = app.assets
+    assert_equal true, env.exporters['application/javascript'].first.options[:minify]
+    assert_nil env.minifier_for("application/javascript")
+  end
+
   def test_js_bundler_cant_set_minify
     app.configure do
       config.assets.js_bundler = { rolldown: { minify: true } }
