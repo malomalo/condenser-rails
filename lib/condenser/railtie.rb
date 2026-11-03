@@ -117,18 +117,18 @@ class Condenser::Railtie < ::Rails::Railtie
     Condenser::Rails::Task.new(app)
   end
   
-  # Minifier names that don't camelize to their class name
-  MINIFIERS = {
-    lightning_css: 'Condenser::LightningCSSMinifier'
-  }.freeze
-
-  def minifier_class_name(value)
-    MINIFIERS[value.to_sym] || "Condenser::#{value.to_s.camelize}Minifier"
+  # The Condenser class for a name and suffix, ignoring case and underscores,
+  # e.g. Condenser::LightningCSSMinifier for :lightning_css and "Minifier"
+  def condenser_class(name, suffix)
+    target = "#{name.to_s.delete('_')}#{suffix}"
+    constant = Condenser.constants.find { |c| c.to_s.casecmp?(target) }
+    Condenser.const_get(constant) if constant
   end
 
   def resolve_minifier(value, env)
     if value.is_a?(Symbol) || value.is_a?(String)
-      klass = minifier_class_name(value).constantize
+      klass = condenser_class(value, 'Minifier')
+      raise NameError, "no Condenser minifier named #{value.inspect}" unless klass
       # Node minifiers (e.g. Terser) install their package into the npm path
       klass <= Condenser::NodeProcessor ? klass.new(env.npm_path) : klass.new
     else
@@ -148,7 +148,7 @@ class Condenser::Railtie < ::Rails::Railtie
       return [value.class.name.to_s.demodulize.delete_suffix('Processor').underscore, nil, nil]
     end
 
-    klass = "Condenser::#{name.to_s.camelize}Processor".safe_constantize if name.is_a?(Symbol) || name.is_a?(String)
+    klass = condenser_class(name, 'Processor') if name.is_a?(Symbol) || name.is_a?(String)
     unless klass.is_a?(Class) && klass <= Condenser::Processor && options.is_a?(Hash)
       raise ArgumentError, "js_bundler must be :rolldown, :rollup, { name => options } or a Condenser::Processor, got #{value.inspect}"
     end
@@ -202,7 +202,7 @@ class Condenser::Railtie < ::Rails::Railtie
       # The bundler minifies its own output when the js_minifier names it; an
       # exporter instance minifies (or not) by itself
       bundler_minifies = js_minifier.to_s == bundler_name
-      if (js_minifier.is_a?(Symbol) || js_minifier.is_a?(String)) && !bundler_minifies && !minifier_class_name(js_minifier).safe_constantize
+      if (js_minifier.is_a?(Symbol) || js_minifier.is_a?(String)) && !bundler_minifies && !condenser_class(js_minifier, 'Minifier')
         raise ArgumentError, "js_minifier #{js_minifier.inspect} isn't a minifier or the js_bundler; set js_minifier to :terser or nil"
       end
 
