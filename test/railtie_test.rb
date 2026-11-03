@@ -589,6 +589,38 @@ class TestRailtie < BootTest
       env.exporters['application/javascript'].first.options
   end
 
+  def test_rolldown_options
+    Rails.env = 'production'
+    app.configure do
+      config.assets.rolldown = { keep_names: true, platform: 'browser' }
+    end
+    app.initialize!
+
+    assert env = app.assets
+    options = env.exporters['application/javascript'].first.options
+    assert_equal true, options[:keep_names]
+    assert_equal 'browser', options[:platform]
+    assert_equal true, options[:minify]
+  end
+
+  def test_rolldown_options_cant_set_minify
+    app.configure do
+      config.assets.rolldown = { minify: true }
+    end
+
+    error = assert_raises(ArgumentError) { app.initialize! }
+    assert_equal "config.assets.rolldown can't set minify; use config.assets.js_minifier", error.message
+  end
+
+  def test_rolldown_options_must_be_a_hash
+    app.configure do
+      config.assets.rolldown = [:keep_names]
+    end
+
+    error = assert_raises(ArgumentError) { app.initialize! }
+    assert_equal 'config.assets.rolldown must be a Hash, got [:keep_names]', error.message
+  end
+
   def test_sourcemap
     [true, :linked, :headers].each do |sourcemap|
       app.config.assets.sourcemap = sourcemap

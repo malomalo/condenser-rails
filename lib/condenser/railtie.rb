@@ -76,6 +76,8 @@ class Condenser::Railtie < ::Rails::Railtie
   # Used outside development and test; set to nil or false to disable
   config.assets.js_minifier  = :rolldown
   config.assets.css_minifier = :lightning_css
+  # Options for the RolldownProcessor, e.g. { keep_names: true }
+  config.assets.rolldown     = {}
   # Source maps: false, true, :linked or :headers, in every environment
   config.assets.sourcemap    = false
   # Directories, relative to Rails.root or absolute, whose files can be
@@ -159,6 +161,13 @@ class Condenser::Railtie < ::Rails::Railtie
       js_minifier = config.assets.js_minifier
       # Rolldown minifies its own output unless another JS minifier is chosen
       rolldown_minifies = minify && js_minifier.to_s == 'rolldown'
+      rolldown_options = config.assets.rolldown || {}
+      unless rolldown_options.is_a?(Hash)
+        raise ArgumentError, "config.assets.rolldown must be a Hash, got #{rolldown_options.inspect}"
+      end
+      if rolldown_options.key?(:minify) || rolldown_options.key?('minify')
+        raise ArgumentError, "config.assets.rolldown can't set minify; use config.assets.js_minifier"
+      end
 
       env.register_transformer  'text/scss', 'text/css', Condenser::ScssTransformer.new
       env.register_preprocessor 'application/javascript', Condenser::JSAnalyzer.new
@@ -168,7 +177,7 @@ class Condenser::Railtie < ::Rails::Railtie
         sources = ['app', *config.assets.tailwind_sources].map { |path| File.expand_path(path, app.root) }
         env.register_preprocessor 'text/css', Condenser::TailwindProcessor.new(env.npm_path, sources: sources, minify: false)
       end
-      env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path, minify: rolldown_minifies)
+      env.register_exporter       'application/javascript', Condenser::RolldownProcessor.new(env.npm_path, **rolldown_options.symbolize_keys, minify: rolldown_minifies)
 
       if minify
         env.register_minifier       'application/javascript', resolve_minifier(js_minifier, env) if js_minifier && !rolldown_minifies

@@ -203,6 +203,17 @@ instance), and `false` or `nil` to disable minification.
 
 Assets are only minified outside the `development` and `test` environments.
 
+**`config.assets.rolldown`**
+
+Options for the default `Condenser::RolldownProcessor`, e.g. `keep_names:`,
+`aliases:`, `platform:` or `module_types:`. Defaults to `{}`. `minify:` is set
+by `config.assets.js_minifier` and can't be set here. It isn't used with
+a custom `config.assets.pipeline`.
+
+``` ruby
+config.assets.rolldown = { keep_names: true }
+```
+
 **`config.assets.sourcemap`**
 
 Sets condenser's `sourcemap` setting, whether a source map is written for each
