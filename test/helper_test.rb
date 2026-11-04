@@ -30,7 +30,7 @@ class HelperTest < ActionView::TestCase
     end
     
     @manifest_file = File.join(@path, 'assets.json')
-    @manifest = Condenser::Manifest.new(@assets, @manifest_file)
+    @manifest = Condenser::Manifest.new(@assets, dir: @path, filename: @manifest_file)
 
     @view = ActionView::Base.new(ActionView::LookupContext.new([]), {}, nil)
     @view.extend ::Condenser::Rails::Helper
@@ -362,7 +362,7 @@ class ManifestHelperTest < NoHostHelperTest
     @manifest.export(*@view.assets_precompiled)
 
     @view.assets              = nil
-    @view.assets_manifest     = Condenser::Manifest.new(@manifest_file)
+    @view.assets_manifest     = Condenser::Manifest.new(dir: @path, filename: @manifest_file)
     @view.resolve_assets_with = :manifest
   end
 

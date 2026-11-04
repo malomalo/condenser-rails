@@ -43,7 +43,7 @@ module Condenser::Rails
 
     def manifest
       if app
-        Condenser::Manifest.new(environment, output, app.config.assets.manifest)
+        Condenser::Manifest.new(environment, dir: output, filename: app.config.assets.manifest)
       else
         super
       end
