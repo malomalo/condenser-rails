@@ -11,7 +11,7 @@ class TaskTest < ActiveSupport::TestCase
     @npm_path = File.expand_path('../../tmp', __FILE__)
     Dir.mkdir(@npm_path) if !Dir.exist?(@npm_path)
     @assets = Condenser.new(@path, npm_path: @npm_path)
-    @manifest = Condenser::Manifest.new(@assets, @manifest_file)
+    @manifest = Condenser::Manifest.new(@assets, dir: @path, filename: @manifest_file)
     
     @rake = Rake::Application.new
     Rake.application = @rake

@@ -244,7 +244,7 @@ class Condenser::Railtie < ::Rails::Railtie
     config = app.config
     
     path = File.join(config.paths['public'].first, config.assets.prefix)
-    Condenser::Manifest.new(app.assets, path, config.assets.manifest)
+    Condenser::Manifest.new(app.assets, dir: path, filename: config.assets.manifest)
   end
 
   config.after_initialize do |app|
